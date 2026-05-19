@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>fx-puzzle - Training Stage</title>
+  <link rel="stylesheet" href="styles/main.css" />
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>fx-puzzle</h1>
+      <p class="tagline">Stage 1: Training</p>
+    </header>
+    <main id="game-root">
+      <div id="hud">
+        <span id="hp">HP: 20 / 20</span>
+        <span id="face">向き: →</span>
+        <span id="turn">Turn: 0</span>
+      </div>
+      <div id="map"></div>
+
+      <section id="board-panel">
+        <div class="panel-title">🎛 Pedal Board</div>
+        <div id="board"></div>
+        <div id="chain-summary"></div>
+      </section>
+
+      <section id="legend">
+        <span class="legend-item"><b style="color:#ff7733">D</b> Distortion (炎)</span>
+        <span class="legend-item"><b style="color:#88ddff">P</b> Phaser (冷気)</span>
+        <span class="legend-item"><b style="color:#88ff88">S</b> Splitter (前3方向)</span>
+        <span class="legend-item"><b style="color:#cc88ff">L</b> Delay (×2回)</span>
+      </section>
+
+      <div id="log"></div>
+
+      <div id="controls">
+        <p>移動: ← ↑ ↓ → ／ 攻撃: Q ／ スロット取り外し: 1〜4</p>
+      </div>
+    </main>
+  </div>
+
+  <!-- 通常のscriptで読み込み（file:// で動かすため module は使わない） -->
+  <!-- texts.js を最初に読み込んで window.TEXTS を用意する -->
+  <script src="src/data/texts.js"></script>
+  <script src="src/pedals.js"></script>
+  <script src="src/main.js"></script>
+</body>
+</html>

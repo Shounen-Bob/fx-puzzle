@@ -1,0 +1,10 @@
+.DS_Store
+node_modules/
+dist/
+*.log
+.vscode/
+.idea/
+
+# Claude Code 関連（個人情報・ローカル設定を含む）
+CLAUDE.md
+.claude/
