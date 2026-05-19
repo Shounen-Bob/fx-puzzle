@@ -3205,7 +3205,7 @@ function renderInventory() {
     `;
     const headerLabel = isWeapon
       ? `<div style="font-size:8px;color:#cc9944;letter-spacing:1px">WEAPON</div>`
-      : "";
+      : `<div style="font-size:8px;color:#9988bb;letter-spacing:1px">PEDAL</div>`;
     // 武器: 説明はホバーで表示。タイル上はアイコン + 名前のみ (赤字は出さない)。
     // ペダル: 従来どおり desc も簡易表示し、詳細はホバー。
     const descHtml = isWeapon
