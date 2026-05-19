@@ -3406,8 +3406,9 @@ function renderAll() {
 //   - enemy: 敵にマウスオーバーで詳細が見れることを教える
 //   - pit:   ピット上ではペダルの付け外しができ、通過で消えることを教える
 // ========================================================================
-const tutorialDismissed = { enemy: false, pit: false, pedal: false };
+const tutorialDismissed = { enemy: false, pit: false, pedal: false, aim: false };
 let pedalTutorialActive = false;
+let aimTutorialActive = false;
 
 function findFirstPit() {
   for (const key of pits) {
@@ -3501,6 +3502,15 @@ function renderTutorialBubbles() {
       return inventoryEl.querySelector(`.inv-item[data-uid="${firstPedal.uid}"]`);
     },
     { onlyFirstFloor: false, activeOnly: () => pedalTutorialActive }
+  );
+  // 構え時の案内: 構えている間だけ、プレイヤータイルを指して矢印キーの新挙動を伝える
+  renderOneBubble(
+    "tutorial-bubble-aim",
+    "aim",
+    '<b>🎯 構え中:</b> <b>矢印キー</b>で<b>向き変更</b>のみ。' +
+      '<br>移動せず、<b>ターンも消費しません</b>。同じキーをもう一度押すと発射。',
+    () => (pendingAttack ? tileAt(player.x, player.y) : null),
+    { onlyFirstFloor: false, activeOnly: () => aimTutorialActive && !!pendingAttack }
   );
 }
 window.addEventListener("resize", () => {
@@ -4502,17 +4512,40 @@ function performAttackKey(key) {
   } else {
     // 別の攻撃キー or 初回 → 構え（ターン消費なし）
     pendingAttack = key;
+    // 初回構え時にエイム案内の吹き出しを有効化
+    if (!tutorialDismissed.aim) aimTutorialActive = true;
     renderAll();
   }
+}
+
+// 構え中の向き変更 (ターン消費なし)
+function rotateFacing(dx, dy) {
+  player.facing = { dx, dy };
+  // 構え中の矢印を 1 回でも使ったら案内チュートリアルを自動終了
+  tutorialDismissed.aim = true;
+  aimTutorialActive = false;
+  renderAll();
 }
 
 document.addEventListener("keydown", (e) => {
   if (gameOver) return;
   switch (e.key) {
-    case "ArrowUp":    performAction(() => tryMove(0, -1)); e.preventDefault(); break;
-    case "ArrowDown":  performAction(() => tryMove(0,  1)); e.preventDefault(); break;
-    case "ArrowLeft":  performAction(() => tryMove(-1, 0)); e.preventDefault(); break;
-    case "ArrowRight": performAction(() => tryMove( 1, 0)); e.preventDefault(); break;
+    case "ArrowUp":
+      if (pendingAttack) rotateFacing(0, -1);
+      else performAction(() => tryMove(0, -1));
+      e.preventDefault(); break;
+    case "ArrowDown":
+      if (pendingAttack) rotateFacing(0,  1);
+      else performAction(() => tryMove(0,  1));
+      e.preventDefault(); break;
+    case "ArrowLeft":
+      if (pendingAttack) rotateFacing(-1, 0);
+      else performAction(() => tryMove(-1, 0));
+      e.preventDefault(); break;
+    case "ArrowRight":
+      if (pendingAttack) rotateFacing( 1, 0);
+      else performAction(() => tryMove( 1, 0));
+      e.preventDefault(); break;
     case "q": case "Q": performAttackKey("q"); e.preventDefault(); break;
     case "w": case "W": performAttackKey("w"); e.preventDefault(); break;
     case "e": case "E": performAttackKey("e"); e.preventDefault(); break;
