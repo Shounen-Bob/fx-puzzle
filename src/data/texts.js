@@ -44,8 +44,8 @@ const TEXTS = {
     },
     phaser: {
       name: "Phaser",
-      desc: "凍結 {red}T (50%)",
-      detail: "命中ごとに 50% で「凍結」を赤字ターン付与する。",
+      desc: "同じ敵に {red}ヒットで凍結4T",
+      detail: "同一の敵に赤字回ヒットすると凍結 (4T 行動不能) を付与。発動でカウンタはリセット。",
     },
 
     tremolo: {

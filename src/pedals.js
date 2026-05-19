@@ -47,13 +47,18 @@ const PEDALS = {
   },
 
   // ===== Value: 状態異常付与 =====
-  // Phaser: 属性付与は廃止、凍結のみのロックダウン特化。デフォ赤字 4 → 4T 凍結。
+  // Phaser: 累積ヒットで凍結を確定発動。
+  //   赤字 = 同じ敵に必要な累積ヒット数 (デフォ 4)。
+  //   凍結時間は固定 4T。
+  //   apply は atk.phaserRequired を最小値で集約し、main.js 側の命中処理で実発動。
   phaser: {
     id: "phaser", kind: "value",
     red: 4, color: "#88ddff", icon: "❄",
     apply(atk, red) {
       if (red <= 0) return;
-      atk.statusEffects.push({ type: "freeze", duration: red, chance: 0.5 });
+      if (atk.phaserRequired == null || red < atk.phaserRequired) {
+        atk.phaserRequired = red;
+      }
     },
   },
 

@@ -167,6 +167,8 @@
     .tile-hp-fill { height: 100%; background: #ff5e5e; transition: width 200ms ease-out; }
     .tile-hp-fill.warn { background: #ffd866; }
     .tile-hp-fill.bad  { background: #ff3344; }
+    /* プレイヤーは満タンが緑、減ると黄→赤 */
+    .tile-hp-fill-player { background: #66dd88; }
 
     .tile-status-icons {
       position: absolute; top: -3px; right: 0;
@@ -1430,7 +1432,7 @@ const WEAPONS = {
   },
   tripletter: {
     id: "tripletter", icon: "彡",
-    damage:  5, damageRed: true,  shape: "triple-front",
+    damage:  8, damageRed: true,  shape: "triple-front",
     color: "#ffaaff",
   },
   compressor: {
@@ -1443,13 +1445,13 @@ const WEAPONS = {
   },
   pusher: {
     id: "pusher",     icon: "➤",
-    damage:  2, damageRed: true,  shape: "single",
+    damage:  6, damageRed: true,  shape: "single",
     color: "#aaddff",
     effect: "pushback",
   },
   lofi: {
     id: "lofi",       icon: "▒",
-    damage:  3, damageRed: true,  shape: "single",
+    damage:  7, damageRed: true,  shape: "single",
     color: "#bb99aa",
     effect: "lofi",
   },
@@ -2097,6 +2099,10 @@ function buildResolvedSection(src, slotIds) {
       ? ` <span style="opacity:0.6;font-size:10px">(計 ${rolls} 回抽選)</span>`
       : "";
     lines.push(`<div>状態異常: <span style="color:#ffd866">${escapeHtml(labels.join(" + "))}</span>${rollNote}</div>`);
+  }
+  // Phaser: 累積ヒット凍結
+  if (atk.phaserRequired) {
+    lines.push(`<div>凍結条件: <span style="color:#88ddff">同じ敵に ${atk.phaserRequired} ヒットで凍結4T</span></div>`);
   }
 
   // 射程 / 追加ダメ% は base section にも出ているが、解決後の値を再掲
@@ -2990,6 +2996,19 @@ function renderMap() {
   arrow.className = "tile-facing " + (FACING_DIR[fkey] || "");
   arrow.textContent = FACING_ARROW[fkey] || "?";
   pt.appendChild(arrow);
+  // --- プレイヤー HP ミニバー (敵と同じスタイル、色は緑系) ---
+  {
+    const ratio = Math.max(0, player.hp / player.hpMax);
+    const pBar = document.createElement("div");
+    pBar.className = "tile-hp-bar tile-hp-bar-player";
+    const pFill = document.createElement("div");
+    pFill.className = "tile-hp-fill tile-hp-fill-player";
+    if (ratio < 0.3)      pFill.classList.add("bad");
+    else if (ratio < 0.6) pFill.classList.add("warn");
+    pFill.style.width = `${(ratio * 100).toFixed(1)}%`;
+    pBar.appendChild(pFill);
+    pt.appendChild(pBar);
+  }
 
   // === 攻撃範囲プレビュー（pendingAttack 構え時のみ） ===
   if (!gameOver && pendingAttack && weapons[pendingAttack]) {
@@ -3266,6 +3285,9 @@ function renderChainSummary() {
           })
           .join("+")
       );
+    }
+    if (atk.phaserRequired) {
+      parts.push(`${atk.phaserRequired}ヒットで凍結4T`);
     }
     lines.push(
       `<span style="color:${ATTACK_COLORS[key]};font-weight:bold">[${key.toUpperCase()}] ${src.name}</span> ` +
@@ -3949,6 +3971,23 @@ async function doAttack(attackKey) {
           enemy.status.push({
             type: s.type, duration: s.duration, damage: s.damage,
           });
+        }
+      }
+      // === Phaser: 累積ヒットで凍結を確定発動 ===
+      //   atk.phaserRequired が設定されていれば、命中ごとにカウンタを加算。
+      //   閾値到達で 4T 凍結を付与し、カウンタをリセット。
+      //   既に凍結中ならカウンタはそのまま据え置き (二重付与は避ける)。
+      if (atk.phaserRequired != null && enemy.hp > 0 && dmg > 0) {
+        const immune = enemy.abilities && enemy.abilities.includes("immune-freeze");
+        if (!immune) {
+          enemy.phaserHits = (enemy.phaserHits || 0) + 1;
+          if (enemy.phaserHits >= atk.phaserRequired) {
+            if (!enemy.status.some((es) => es.type === "freeze")) {
+              enemy.status.push({ type: "freeze", duration: 4 });
+              enemy.phaserHits = 0;
+              log(`❄ ${enemyDisplayName(enemy)} が凍結! (4T)`, "win");
+            }
+          }
         }
       }
       const killed = before > 0 && enemy.hp <= 0;
