@@ -791,6 +791,90 @@
       background: rgba(255, 182, 72, 0.08);
       letter-spacing: 1px;
     }
+
+    /* ===== マップ直上のクイック操作ヘルプ ===== */
+    #quick-help {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 10px;
+      padding: 8px 12px;
+      margin: 4px 0 8px;
+      background: linear-gradient(180deg, #1a1d24, #161920);
+      border: 1px solid #2c313c;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #cfd3da;
+      line-height: 1.5;
+    }
+    #quick-help b { color: #ffd866; font-weight: 600; margin-right: 4px; }
+    #quick-help .qh-sep { color: #444; padding: 0 2px; }
+    #quick-help .qh-note { color: #888; font-size: 11px; margin-left: 4px; }
+    #quick-help kbd {
+      display: inline-block;
+      min-width: 18px;
+      padding: 1px 6px;
+      margin: 0 1px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 11px;
+      color: #e8eaef;
+      background: #2a2f3a;
+      border: 1px solid #404858;
+      border-bottom-width: 2px;
+      border-radius: 3px;
+      text-align: center;
+    }
+
+    /* ===== 1F チュートリアル吹き出し (敵を指す) ===== */
+    #tutorial-bubble {
+      position: absolute;
+      z-index: 60;
+      max-width: 240px;
+      padding: 10px 12px;
+      background: linear-gradient(180deg, #fff8d6, #ffe8a3);
+      color: #2a2200;
+      font-size: 13px;
+      line-height: 1.45;
+      border: 2px solid #c9a531;
+      border-radius: 10px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+      pointer-events: auto;
+      animation: tut-bob 1.6s ease-in-out infinite;
+    }
+    #tutorial-bubble b { color: #8a5b00; }
+    #tutorial-bubble::before {
+      content: "";
+      position: absolute;
+      left: -10px;
+      top: 50%;
+      transform: translateY(-50%);
+      border-style: solid;
+      border-width: 10px 12px 10px 0;
+      border-color: transparent #c9a531 transparent transparent;
+    }
+    #tutorial-bubble::after {
+      content: "";
+      position: absolute;
+      left: -7px;
+      top: 50%;
+      transform: translateY(-50%);
+      border-style: solid;
+      border-width: 8px 10px 8px 0;
+      border-color: transparent #ffe8a3 transparent transparent;
+    }
+    #tutorial-bubble .tut-close {
+      position: absolute;
+      top: 2px; right: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      color: #8a5b00;
+      line-height: 1;
+    }
+    #tutorial-bubble .tut-close:hover { color: #c9a531; }
+    @keyframes tut-bob {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-3px); }
+    }
   `;
   const style = document.createElement("style");
   style.textContent = css;
@@ -2285,7 +2369,7 @@ function parseMap() {
         walls.add(`${x},${y}`);
       } else if (ch === "@") {
         player.x = x; player.y = y;
-        pits.add(`${x},${y}`);          // 開始位置は自動でピット
+        // ※ 開始位置はピットにしない (ピットを貴重な資源として扱う)
       } else if (ch === "P") {
         pits.add(`${x},${y}`);
       } else if (ch === "G") {
@@ -3260,8 +3344,51 @@ function renderAll() {
   renderEnemyStatus();
   renderArmIndicator();
   renderStatusBanner();
+  renderTutorialBubble();
   boardPanel.classList.toggle("locked", !isOnPit());
 }
+
+// ========================================================================
+// 1F チュートリアル吹き出し: 敵にマウスオーバーで詳細が見れることを教える
+// ========================================================================
+let tutorialBubbleDismissed = false;
+function renderTutorialBubble() {
+  let bubble = document.getElementById("tutorial-bubble");
+  // 1F以外、または dismissed なら非表示
+  if (currentFloorIdx !== 0 || tutorialBubbleDismissed) {
+    if (bubble) bubble.remove();
+    return;
+  }
+  const target = enemies.find((e) => e.hp > 0);
+  if (!target) {
+    if (bubble) bubble.remove();
+    return;
+  }
+  const tile = tileAt(target.x, target.y);
+  if (!tile) return;
+  if (!bubble) {
+    bubble = document.createElement("div");
+    bubble.id = "tutorial-bubble";
+    bubble.innerHTML =
+      '<span class="tut-close" title="閉じる">✕</span>' +
+      '<b>💡 ヒント:</b> 敵タイルに<b>マウスを乗せる</b>と、' +
+      'HP / 属性耐性 / 特殊能力 などの詳細が見られます。';
+    document.body.appendChild(bubble);
+    bubble.querySelector(".tut-close").addEventListener("click", () => {
+      tutorialBubbleDismissed = true;
+      bubble.remove();
+    });
+  }
+  // 位置: 敵タイルの右側、吹き出しの中央を敵の中央に合わせる
+  const rect = tile.getBoundingClientRect();
+  const bx = rect.right + window.scrollX + 14;
+  const by = rect.top + window.scrollY + rect.height / 2 - bubble.offsetHeight / 2;
+  bubble.style.left = `${bx}px`;
+  bubble.style.top = `${Math.max(window.scrollY + 8, by)}px`;
+}
+window.addEventListener("resize", () => {
+  if (typeof renderTutorialBubble === "function") renderTutorialBubble();
+});
 
 // ========================================================================
 // ログ
@@ -3371,8 +3498,15 @@ function tryMove(dx, dy) {
   const nx = player.x + dx;
   const ny = player.y + dy;
   if (isBlocked(nx, ny)) return false;
+  const oldKey = `${player.x},${player.y}`;
+  const wasOnPit = pits.has(oldKey);
   player.x = nx;
   player.y = ny;
+  // ピットは使い捨て: 一度離れると消失する
+  if (wasOnPit) {
+    pits.delete(oldKey);
+    log("🕳 ピットが崩れた (使い捨て)", "info");
+  }
   tryPickup();
   applyOnStepPassives();
   return true;
@@ -3992,8 +4126,14 @@ function crankGrab(enemy, dir, dist) {
   //   destination = enemy + dir (line check で step 1 は通ること確定)
   const destX = enemy.x + dir.dx;
   const destY = enemy.y + dir.dy;
+  const oldKey = `${player.x},${player.y}`;
+  const wasOnPit = pits.has(oldKey);
   player.x = destX;
   player.y = destY;
+  if (wasOnPit && oldKey !== `${destX},${destY}`) {
+    pits.delete(oldKey);
+    log("🕳 ピットが崩れた (使い捨て)", "info");
+  }
   // プレイヤーの向きをクランクブリッツに向ける (即反撃しやすく)
   player.facing = { dx: -dir.dx, dy: -dir.dy };
   log(`🪝 ${enemyDisplayName(enemy)} のロケットグラブ! -${dmg} / 引き寄せ`, "attack");
