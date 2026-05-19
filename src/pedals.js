@@ -46,34 +46,14 @@ const PEDALS = {
     apply(atk, red) { if (red > 0) atk.damage = atk.damage * red; },
   },
 
-  // ===== Value: 属性付与 =====
-  fuzz: {
-    id: "fuzz", kind: "value",
-    red: 3, color: "#ff7733", icon: "🔥",
-    apply(atk, red) {
-      if (red <= 0) return;
-      atk.element = "fire";
-      atk.damage += red;
-      atk.statusEffects.push({ type: "burn", duration: 2, damage: 2, chance: 0.5 });
-    },
-  },
+  // ===== Value: 状態異常付与 =====
+  // Phaser: 属性付与は廃止、凍結のみのロックダウン特化。デフォ赤字 4 → 4T 凍結。
   phaser: {
     id: "phaser", kind: "value",
-    red: 2, color: "#88ddff", icon: "❄",
+    red: 4, color: "#88ddff", icon: "❄",
     apply(atk, red) {
       if (red <= 0) return;
-      atk.element = "ice";
       atk.statusEffects.push({ type: "freeze", duration: red, chance: 0.5 });
-    },
-  },
-  octaver: {
-    id: "octaver", kind: "value",
-    red: 1, color: "#ffee55", icon: "⚡",
-    apply(atk, red) {
-      if (red <= 0) return;
-      atk.element = "thunder";
-      atk.damage += red;
-      atk.statusEffects.push({ type: "shock", duration: 1, chance: 0.5 });
     },
   },
 
@@ -204,8 +184,8 @@ const PEDALS = {
 // 予約文字: # . @ P G E F I B K W A 1 2 3 4 5 6 7 ?
 //   (壁/床/プレイヤー/ピット/ゴール/敵類(スライム+スパイカ/人面樹/アーチャー)/武器/拾得スロット)
 const PEDAL_MAP = {
-  D: "driver",    Z: "fuzz",      X: "phaser",
-  O: "octaver",   T: "tremolo",   L: "delay",   J: "gigadelay",
+  D: "driver",    X: "phaser",
+  T: "tremolo",   L: "delay",   J: "gigadelay",
   M: "booster",   V: "overdrive", S: "stack",
   U: "lift",      R: "push",      N: "trim",    C: "cut",
   H: "preamp",    Y: "powersupply",
