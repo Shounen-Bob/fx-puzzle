@@ -779,6 +779,16 @@
       background: #2a2a30;
       margin: 3px 0;
     }
+    #item-menu .menu-hint {
+      padding: 8px 10px;
+      font-size: 11px;
+      color: #cfcfcf;
+      line-height: 1.5;
+      background: rgba(255, 216, 102, 0.06);
+      border-left: 2px solid #ffd866;
+      margin: 2px 0;
+    }
+    #item-menu .menu-hint b { color: #ffd866; }
 
     /* ===== Floor インジケータ (HUD) ===== */
     #floor-indicator {
@@ -1783,13 +1793,14 @@ hudEl.appendChild(floorEl);
 
 // 🐞 DEBUG: 任意のフロアにワープするドロップダウン。
 // loadFloor() を直接呼び、現在の入力ロック中・gameOver/RunClear からも復帰可能にする。
+// 既定で非表示、D キーで トグル。
 const floorWarpEl = document.createElement("select");
 floorWarpEl.id = "floor-warp";
 floorWarpEl.title = "[DEBUG] 任意のフロアにジャンプ";
 floorWarpEl.style.cssText =
   "margin-left:8px;background:#1a1a22;color:#cfcfcf;border:1px solid #6a4aaa;" +
   "border-radius:4px;font-family:ui-monospace,monospace;font-size:11px;" +
-  "padding:1px 4px;cursor:pointer;outline:none";
+  "padding:1px 4px;cursor:pointer;outline:none;display:none";
 for (let i = 0; i < FLOORS.length; i++) {
   const opt = document.createElement("option");
   opt.value = String(i);
@@ -1842,9 +1853,10 @@ inventoryEl.style.cssText =
 
 // === デバッグ: 全アイテム取得ボタン ===
 // 押した瞬間に INV_MAX を Infinity にして、未所持の全武器・全ペダルを 1 つずつ追加
+// 既定で非表示、D キーでトグル。
 const debugBar = document.createElement("div");
 debugBar.style.cssText =
-  "display:flex; justify-content:center; margin-top:10px;";
+  "display:none; justify-content:center; margin-top:10px;";
 const debugAllBtn = document.createElement("button");
 debugAllBtn.type = "button";
 debugAllBtn.textContent = "🛠 DEBUG: 全アイテム取得";
@@ -2314,12 +2326,13 @@ function showItemMenu(item, anchorEl) {
     addOpt(`⚔ W スロットに装備${weapons.w ? ` (現: ${WEAPONS[weapons.w].name})` : ""}`, () => equipWeaponTo(item.uid, "w"));
     addOpt(`⚔ E スロットに装備${weapons.e ? ` (現: ${WEAPONS[weapons.e].name})` : ""}`, () => equipWeaponTo(item.uid, "e"));
   } else {
-    // ペダル
-    for (const k of ["q", "w", "e"]) {
-      const emptyCount = board[k].filter((s) => s === null).length;
-      const label = `🎛 [${k.toUpperCase()}] に装着 (空 ${emptyCount}/${BOARD_SIZE})`;
-      addOpt(label, () => autoEquipPedalTo(item.uid, k));
-    }
+    // ペダル: 装着はドラッグ&ドロップ専用 (クリック装着は廃止)
+    const hint = document.createElement("div");
+    hint.className = "menu-hint";
+    hint.innerHTML =
+      '🎛 装着するには下の <b>[Q]</b> / <b>[W]</b> / <b>[E]</b> ボードの空きスロットへ' +
+      '<b style="color:#ffd866">ドラッグ&ドロップ</b>してください';
+    menu.appendChild(hint);
   }
   sep();
   addOpt("🗑 捨てる", () => discardItem(item.uid), "danger");
@@ -2485,6 +2498,10 @@ function tryPickup() {
   inventory.push(newItem(entry.kind, entry.id));
   pickups.delete(key);
   log(`📥 ${def.name} を入手 (${inventory.length}/${INV_MAX})`, "pickup");
+  // 初回ペダル取得時にドラッグ案内の吹き出しを有効化
+  if (entry.kind === "pedal" && !tutorialDismissed.pedal) {
+    pedalTutorialActive = true;
+  }
 }
 
 function setupGrid() {
@@ -3158,7 +3175,7 @@ function renderInventory() {
   const n = inventory.length;
   const cap = Number.isFinite(INV_MAX) ? INV_MAX : "∞";
   inventoryTitle.innerHTML =
-    `📦 Inventory (${n}/${cap}) - クリックでメニュー / ペダルは <span style="color:${ATTACK_COLORS[activeBoard]};font-weight:bold">[${activeBoard.toUpperCase()}]</span> にドラッグでも装着可`;
+    `📦 Inventory (${n}/${cap}) - ペダルは <span style="color:${ATTACK_COLORS[activeBoard]};font-weight:bold">[${activeBoard.toUpperCase()}]</span> ボードに<b style="color:#ffd866">ドラッグ&ドロップ</b>で装着 / クリックで詳細`;
   inventoryEl.innerHTML = "";
   if (n === 0) {
     const empty = document.createElement("div");
@@ -3367,7 +3384,8 @@ function renderAll() {
 //   - enemy: 敵にマウスオーバーで詳細が見れることを教える
 //   - pit:   ピット上ではペダルの付け外しができ、通過で消えることを教える
 // ========================================================================
-const tutorialDismissed = { enemy: false, pit: false };
+const tutorialDismissed = { enemy: false, pit: false, pedal: false };
+let pedalTutorialActive = false;
 
 function findFirstPit() {
   for (const key of pits) {
@@ -3388,14 +3406,23 @@ function placeBubble(bubble, tile) {
   const bx = wantRight
     ? rect.right + window.scrollX + margin
     : rect.left + window.scrollX - margin - bw;
-  const by = rect.top + window.scrollY + rect.height / 2 - bh / 2;
+  let by = rect.top + window.scrollY + rect.height / 2 - bh / 2;
+  // 画面の上下にクランプ
+  const minTop = window.scrollY + 8;
+  const maxTop = window.scrollY + window.innerHeight - bh - 8;
+  by = Math.max(minTop, Math.min(maxTop, by));
   bubble.style.left = `${bx}px`;
-  bubble.style.top = `${Math.max(window.scrollY + 8, by)}px`;
+  bubble.style.top = `${by}px`;
 }
 
-function renderOneBubble(id, key, html, getTile) {
+function renderOneBubble(id, key, html, getTile, opts) {
+  const onlyFirstFloor = !opts || opts.onlyFirstFloor !== false;
   let bubble = document.getElementById(id);
-  if (currentFloorIdx !== 0 || tutorialDismissed[key]) {
+  if ((onlyFirstFloor && currentFloorIdx !== 0) || tutorialDismissed[key]) {
+    if (bubble) bubble.remove();
+    return;
+  }
+  if (opts && opts.activeOnly && !opts.activeOnly()) {
     if (bubble) bubble.remove();
     return;
   }
@@ -3439,6 +3466,20 @@ function renderTutorialBubbles() {
       return p ? tileAt(p.x, p.y) : null;
     }
   );
+  // ペダル初取得時の案内: フロアに依存せず、未装着の間だけ表示
+  renderOneBubble(
+    "tutorial-bubble-pedal",
+    "pedal",
+    '<b>🎛 ペダル獲得!</b> 下の <b>[Q]</b> / <b>[W]</b> / <b>[E]</b> ボードの空きスロットへ' +
+      '<b style="color:#8a5b00">ドラッグ&ドロップ</b>して装着してください。' +
+      '<br><span style="color:#5a4400;font-size:11px">(クリックでは装着できません)</span>',
+    () => {
+      const firstPedal = inventory.find((it) => it.kind === "pedal");
+      if (!firstPedal) return null;
+      return inventoryEl.querySelector(`.inv-item[data-uid="${firstPedal.uid}"]`);
+    },
+    { onlyFirstFloor: false, activeOnly: () => pedalTutorialActive }
+  );
 }
 window.addEventListener("resize", () => {
   if (typeof renderTutorialBubbles === "function") renderTutorialBubbles();
@@ -3470,6 +3511,9 @@ function placePedalAtSlot(boardKey, slotIdx, uid) {
   removeFromInventoryByUid(uid);
   board[boardKey][slotIdx] = item;
   log(`${PEDALS[item.id].name} を [${boardKey.toUpperCase()}] スロット${slotIdx + 1} に装着`, "pickup");
+  // ドラッグ装着の達成 → 案内チュートリアルを自動終了
+  tutorialDismissed.pedal = true;
+  pedalTutorialActive = false;
   recomputePlayerHpMax();
   renderAll();
   return true;
@@ -4440,6 +4484,15 @@ document.addEventListener("keydown", (e) => {
       removePedalFromSlot(activeBoard, parseInt(e.key, 10) - 1);
       e.preventDefault();
       break;
+    case "d": case "D": {
+      // 🐞 デバッグメニューの表示トグル
+      const shown = floorWarpEl.style.display !== "none";
+      floorWarpEl.style.display = shown ? "none" : "";
+      debugBar.style.display = shown ? "none" : "flex";
+      log(`🐞 デバッグメニュー: ${shown ? "OFF" : "ON"}`, "info");
+      e.preventDefault();
+      break;
+    }
   }
 });
 
