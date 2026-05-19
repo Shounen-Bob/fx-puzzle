@@ -165,6 +165,16 @@
       pointer-events: none;
       text-shadow: 0 0 4px #66dd44;
     }
+    /* 盾の騎士の 3×3 内で守護中なプレイヤー: 左上に盾マーク + 黄金グロー */
+    .tile.player.shielded::before {
+      content: "🛡";
+      position: absolute; top: -2px; left: -2px;
+      font-size: 12px; line-height: 1;
+      animation: rage-pulse 700ms ease-in-out infinite;
+      pointer-events: none;
+      text-shadow: 0 0 6px #ffd866;
+      z-index: 2;
+    }
 
     /* ===== 視認性強化（タイル上の overlays） ===== */
     .tile { position: relative; }
@@ -1257,7 +1267,7 @@ const FLOORS = [
         "#..........J.........#",
         "#.A................I.#",
         "#.......?...?........#",
-        "#..........B.........#",
+        "#......Z...B...Z.....#",
         "#.......?...?........#",
         "#.Q..............X.F.#",
         "#........W...........#",
@@ -1272,7 +1282,7 @@ const FLOORS = [
         "#.......##...........#",
         "#.......##....?......#",
         "#....I...W.....Q.....#",
-        "#..........B.........#",
+        "#.......Z..B....Z....#",
         "#....F.........I.....#",
         "#......?.....W.......#",
         "#.......##...........#",
@@ -1299,7 +1309,7 @@ const FLOORS = [
         "######################",
         "#.@..................#",
         "#....................#",
-        "#..F.....Q.....A.....#",
+        "#..F....ZQ....ZA.....#",
         "#....................#",
         "#...##.....##........#",
         "#...##..?..##....?...#",
@@ -1321,7 +1331,7 @@ const FLOORS = [
         "#....#..#....#.......#",
         "#....#..#?...#..?....#",
         "#....#..######....Q..#",
-        "#....#............F..#",
+        "#....#............F.Z#",
         "#....##############..#",
         "#.....W..........W...#",
         "#......P............G#",
@@ -1348,7 +1358,7 @@ const FLOORS = [
         "#....................#",
         "#......##....##......#",
         "#...?..........?.....#",
-        "#..........B.........#",
+        "#.....Z....B....Z....#",
         "#......##....##......#",
         "#..........J.........#",
         "#.I......A.........F.#",
@@ -1363,7 +1373,7 @@ const FLOORS = [
         "#....................#",
         "#.F....##....##..X.I.#",
         "#......##....##......#",
-        "#.........B..........#",
+        "#....Z....B....Z.....#",
         "#......##....##......#",
         "#.I....##....##....Q.#",
         "#.........J..........#",
@@ -1570,6 +1580,7 @@ function recomputePlayerHpMax() {
 //   "counter-thorn"  攻撃を受けると反射ダメージ (値は enemy.counter)
 //   "rooted"         押し出し (Pusher / pushback) 無効
 //   "root-bind"      隣接時、プレイヤーの移動を阻止する (攻撃と向き変更は可)
+//   "damage-cap-5"   自身を中心とする 3×3 内のプレイヤーが受けるダメージを 5 に上限
 //   "ranged-3"       遠隔3マス矢攻撃 (アーチャー)
 const ENEMY_ABILITIES = {
   "weak-fire":     { name: "炎弱点 ×2",      kind: "weak",   color: "#ff9966", icon: "⚠" },
@@ -1585,6 +1596,7 @@ const ENEMY_ABILITIES = {
   "counter-thorn-storm": { name: "棘嵐 (連撃で倍化反射 4→8→16→32...)", kind: "trait", color: "#ff6644", icon: "✦" },
   "rooted":        { name: "押し出し無効",    kind: "trait",  color: "#aaffaa", icon: "⚓" },
   "root-bind":     { name: "根縛り (隣接で移動阻止)", kind: "trait", color: "#88dd88", icon: "🪢" },
+  "damage-cap-5":  { name: "守護結界 (3×3 内で被ダメを 5 に上限)", kind: "trait", color: "#ffd866", icon: "🛡" },
   "ranged-3":      { name: "遠隔3マス (矢)",  kind: "trait",  color: "#ffaaff", icon: "🏹" },
   "rocket-grab-5": { name: "ロケットグラブ (直線5マス・引き寄せ)", kind: "trait", color: "#ffcc44", icon: "🪝" },
   "death-rage":    { name: "死亡時 3T 怒り (ATK×2)", kind: "trait", color: "#ff5544", icon: "👹" },
@@ -1611,6 +1623,8 @@ function defaultAbilitiesFor(type, isBoss) {
     list.push("rocket-grab-5");
   } else if (type === "ogre") {
     list.push("death-rage");
+  } else if (type === "knight") {
+    list.push("damage-cap-5");
   } else if (type === "wraith") {
     list.push("hide-aura-3");
   } else if (type === "phantomwraith") {
@@ -1658,6 +1672,7 @@ const ENEMY_TYPE_LABEL = {
   neutral: "無属性", fire: "炎", ice: "氷",
   thorn: "棘", gianturtle: "鋼棘", tree: "樹", archer: "弓", ogre: "鬼",
   wraith: "怨霊", phantomwraith: "幻霊", crankblitz: "鉤機械",
+  knight: "盾騎士",
 };
 const ENEMY_TYPE_COLOR = {
   neutral: "#88aa88", fire: "#ff8a4d", ice: "#88c0e0",
@@ -1666,6 +1681,7 @@ const ENEMY_TYPE_COLOR = {
   ogre: "#cc5544",
   wraith: "#bb88ff", phantomwraith: "#dd66ff",
   crankblitz: "#d4a040",
+  knight: "#c8b070",
 };
 // マップ文字 → 敵タイプ。'B' のみ isBoss も true になる (parseMap で分岐)
 const ENEMY_CHAR_TYPE = {
@@ -1676,6 +1692,7 @@ const ENEMY_CHAR_TYPE = {
   Q: "ogre",            // レイジ・オーガ (HP100/ATK10、死亡時 3T 怒り状態)
   R: "wraith",          // レイス (HP80/ATK4、周囲3×3の敵を隠す)
   X: "phantomwraith",   // ファントムレイス (HP100/ATK10、周囲5×5の敵を隠す)
+  Z: "knight",          // 盾の騎士 (HP50/ATK2、3×3 内のプレイヤー被ダメを 5 にキャップ)
 };
 
 // レイジ・オーガ: フロアに依存しない固定スタッツ。
@@ -1717,6 +1734,14 @@ const GIANT_TURTLE_STATS = {
   hp: 85, atk: 6,
   dropChance: 1.0,
   dropPool: ["subwoofer", "badassdriver", "tubedriver", "stack", "gigadelay"],
+};
+
+// 盾の騎士: 自身の 3×3 内にいるプレイヤーが受けるダメージを 5 にキャップする支援系。
+// HP は控えめだが、隣接戦闘で道連れにする「壁役」ポジション。
+const KNIGHT_STATS = {
+  hp: 50, atk: 2,
+  dropChance: 0.60,
+  dropPool: ["preamp", "body", "cabsim", "lift"],
 };
 
 const ENEMY_ATK = 3;       // 敵の攻撃力
@@ -2165,6 +2190,7 @@ function enemyDisplayName(e) {
   if (e.type === "ogre")   return "レイジ・オーガ";
   if (e.type === "wraith")        return "レイス";
   if (e.type === "phantomwraith") return "ファントムレイス";
+  if (e.type === "knight")        return "盾の騎士";
   const label = ENEMY_TYPE_LABEL[e.type] || "無属性";
   return `${label}スライム`;
 }
@@ -2179,6 +2205,7 @@ function enemyTypeIcon(e) {
   if (e.type === "ogre")   return "👹";
   if (e.type === "wraith")        return "👻";
   if (e.type === "phantomwraith") return "💀";
+  if (e.type === "knight")        return "🛡";
   return e.type === "fire" ? "🔥" : e.type === "ice" ? "❄" : "・";
 }
 
@@ -2200,6 +2227,7 @@ function enemyFlavorText(e) {
     case "ogre":    return "倒しても3ターンは怒り狂って暴れ回る、頑丈な鬼。最後の一発に気をつけろ。";
     case "wraith":  return "周囲3×3の仲間を幻惑のオーラで隠す怨霊。隣の敵が誰なのか、本人を倒すまで見えない。";
     case "phantomwraith": return "5×5の広域に幻惑を撒く上位種。HPも正体も判別不能の包囲網を作るやばい奴。";
+    case "knight":  return "誇り高き盾の騎士。3×3 内の味方 (この場合は強敵) を庇い、プレイヤーへのダメージを 5 に抑え込む。攻撃力自体は控えめ、優先的に処理したい。";
     default:        return "詳細情報なし。倒して調査せよ。";
   }
 }
@@ -2427,6 +2455,7 @@ function parseMap() {
                  : type === "phantomwraith" ? PHANTOM_WRAITH_STATS
                  : type === "gianturtle"    ? GIANT_TURTLE_STATS
                  : type === "crankblitz"    ? CRANK_BLITZ_STATS
+                 : type === "knight"        ? KNIGHT_STATS
                  : (isBoss ? (cfg.boss || defaultEnemy) : (cfg[type] || defaultEnemy));
         const enemy = {
           x, y, type, isBoss,
@@ -2882,6 +2911,40 @@ function phantomWraithSvg() {
   );
 }
 
+// 盾の騎士: 中央に金属ヘルム + 赤い羽根、左に大盾、右に槍。
+// Pantheon イメージ。3×3 内のプレイヤーを庇い、被ダメを 5 にキャップ。
+function knightSvg() {
+  return (
+    `<svg class="char-svg knight-svg" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">` +
+      // 影
+      `<ellipse cx="16" cy="29" rx="9" ry="1.6" fill="rgba(0,0,0,0.4)"/>` +
+      // 赤いケープ
+      `<path d="M 8 10 Q 4 16, 6 25 L 26 25 Q 28 16, 24 10 L 22 12 Q 16 14, 10 12 Z" ` +
+            `fill="#cc2233" stroke="#7a1422" stroke-width="0.4"/>` +
+      // 鎧 (胴)
+      `<rect x="11" y="14" width="10" height="11" fill="#a0a3aa" stroke="#48484f" stroke-width="0.4" rx="1"/>` +
+      `<path d="M 13 16 L 19 16 L 19 22 L 17 24 L 15 24 L 13 22 Z" fill="#c8b070" stroke="#6a5530" stroke-width="0.3"/>` +
+      // 槍 (右側、斜めに長く)
+      `<line x1="23" y1="5" x2="29" y2="27" stroke="#7a5a30" stroke-width="1.3" stroke-linecap="round"/>` +
+      `<polygon points="22.5,5 25,3 24.2,7" fill="#e0e2e8" stroke="#48484f" stroke-width="0.3"/>` +
+      // 大盾 (左側、円形)
+      `<g>` +
+        `<ellipse cx="7.5" cy="18" rx="5" ry="6.5" fill="#3a78c8" stroke="#c8b070" stroke-width="1"/>` +
+        `<path d="M 7.5 13 L 9 18 L 7.5 23 L 6 18 Z" fill="#c8b070"/>` +
+        `<circle cx="7.5" cy="18" r="1.4" fill="#ffe488" stroke="#7a5a30" stroke-width="0.3"/>` +
+      `</g>` +
+      // ヘルム
+      `<path d="M 11.5 6 Q 16 3, 20.5 6 L 20.5 12 Q 16 13.5, 11.5 12 Z" ` +
+            `fill="#cccfd5" stroke="#5a5a65" stroke-width="0.4"/>` +
+      // フェイスガード (横スリット)
+      `<rect x="12.5" y="8.5" width="7" height="1.2" fill="#1a1a22"/>` +
+      // 赤い羽根 (横向きのプルーム)
+      `<path d="M 16 3 Q 21 0, 24 1.5 Q 22 4, 17 5 Z" ` +
+            `fill="#ee3344" stroke="#aa1122" stroke-width="0.3"/>` +
+    `</svg>`
+  );
+}
+
 // 隠蔽状態の敵 (誰だか分からない)
 function hiddenEnemySvg() {
   return (
@@ -2907,6 +2970,7 @@ function enemySvg(e) {
   if (e.type === "ogre")   return ogreSvg(!!e.rage);
   if (e.type === "wraith")        return wraithSvg();
   if (e.type === "phantomwraith") return phantomWraithSvg();
+  if (e.type === "knight") return knightSvg();
   return slimeSvg(e.type, e.isBoss);
 }
 
@@ -3002,6 +3066,8 @@ function renderMap() {
   else if (pits.has(pkey)) pt.classList.add("on-pit-bg");
   // 人面樹に縛られていれば縛りマークを表示
   if (adjacentRootBinder(player.x, player.y)) pt.classList.add("root-bound");
+  // 盾の騎士の 3×3 内なら守護中マークを表示
+  if (isShieldedByKnight()) pt.classList.add("shielded");
   pt.innerHTML = playerSvg(player.facing);
   // --- 向き矢印 (上下左右いずれにも対応する追加 indicator) ---
   const fkey = `${player.facing.dx},${player.facing.dy}`;
@@ -4068,6 +4134,7 @@ async function doAttack(attackKey) {
           counter = enemy.counter != null ? enemy.counter : 2;
         }
         if (counter > 0) {
+          counter = applyKnightDamageCap(counter);
           player.hp -= counter;
           showFloatingDamage(player.x, player.y, counter, "");
           spawnHurtFx(player.x, player.y);
@@ -4186,10 +4253,27 @@ function isCellBlockedForEnemy(self, x, y) {
   return false;
 }
 
+// 盾の騎士: いずれかの生存中 knight の 3×3 内にプレイヤーがいるか?
+function isShieldedByKnight() {
+  for (const e of enemies) {
+    if (e.hp <= 0) continue;
+    if (!e.abilities || !e.abilities.includes("damage-cap-5")) continue;
+    if (Math.abs(e.x - player.x) <= 1 && Math.abs(e.y - player.y) <= 1) return true;
+  }
+  return false;
+}
+
+// 守護中なら被ダメを 5 に上限。
+function applyKnightDamageCap(dmg) {
+  if (dmg <= 5) return dmg;
+  return isShieldedByKnight() ? 5 : dmg;
+}
+
 function enemyAttackPlayer(enemy) {
   let dmg = enemy.atk != null ? enemy.atk : ENEMY_ATK;
   // 怒り状態中は ATK ×2 (death-rage の効果)
   if (enemy.rage) dmg *= 2;
+  dmg = applyKnightDamageCap(dmg);
   player.hp -= dmg;
   showFloatingDamage(player.x, player.y, dmg, "");
 
@@ -4240,7 +4324,8 @@ function tryArcherShoot(archer) {
 }
 
 function archerShoot(archer, dir, dist) {
-  const dmg = archer.atk != null ? archer.atk : ENEMY_ATK;
+  let dmg = archer.atk != null ? archer.atk : ENEMY_ATK;
+  dmg = applyKnightDamageCap(dmg);
   spawnArrowFx(archer.x, archer.y, dir, dist);
   player.hp -= dmg;
   showFloatingDamage(player.x, player.y, dmg, "");
@@ -4284,7 +4369,8 @@ function tryCrankGrab(enemy) {
 }
 
 function crankGrab(enemy, dir, dist) {
-  const dmg = enemy.atk != null ? enemy.atk : ENEMY_ATK;
+  let dmg = enemy.atk != null ? enemy.atk : ENEMY_ATK;
+  dmg = applyKnightDamageCap(dmg);
   // フック飛行 → 着弾 → 引き戻し の順で演出
   spawnHookFx(enemy.x, enemy.y, dir, dist);
   player.hp -= dmg;
