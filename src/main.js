@@ -165,16 +165,6 @@
       pointer-events: none;
       text-shadow: 0 0 4px #66dd44;
     }
-    /* 盾の騎士の 3×3 内で守護中なプレイヤー: 左上に盾マーク + 黄金グロー */
-    .tile.player.shielded::before {
-      content: "🛡";
-      position: absolute; top: -2px; left: -2px;
-      font-size: 12px; line-height: 1;
-      animation: rage-pulse 700ms ease-in-out infinite;
-      pointer-events: none;
-      text-shadow: 0 0 6px #ffd866;
-      z-index: 2;
-    }
 
     /* ===== 視認性強化（タイル上の overlays） ===== */
     .tile { position: relative; }
@@ -1580,7 +1570,7 @@ function recomputePlayerHpMax() {
 //   "counter-thorn"  攻撃を受けると反射ダメージ (値は enemy.counter)
 //   "rooted"         押し出し (Pusher / pushback) 無効
 //   "root-bind"      隣接時、プレイヤーの移動を阻止する (攻撃と向き変更は可)
-//   "damage-cap-5"   自身を中心とする 3×3 内のプレイヤーが受けるダメージを 5 に上限
+//   "damage-taken-cap-5" この敵が一度に受けるダメージは 5 に上限
 //   "ranged-3"       遠隔3マス矢攻撃 (アーチャー)
 const ENEMY_ABILITIES = {
   "weak-fire":     { name: "炎弱点 ×2",      kind: "weak",   color: "#ff9966", icon: "⚠" },
@@ -1596,7 +1586,7 @@ const ENEMY_ABILITIES = {
   "counter-thorn-storm": { name: "棘嵐 (連撃で倍化反射 4→8→16→32...)", kind: "trait", color: "#ff6644", icon: "✦" },
   "rooted":        { name: "押し出し無効",    kind: "trait",  color: "#aaffaa", icon: "⚓" },
   "root-bind":     { name: "根縛り (隣接で移動阻止)", kind: "trait", color: "#88dd88", icon: "🪢" },
-  "damage-cap-5":  { name: "守護結界 (3×3 内で被ダメを 5 に上限)", kind: "trait", color: "#ffd866", icon: "🛡" },
+  "damage-taken-cap-5": { name: "鉄壁の盾 (被ダメを 5 に上限)", kind: "trait", color: "#ffd866", icon: "🛡" },
   "ranged-3":      { name: "遠隔3マス (矢)",  kind: "trait",  color: "#ffaaff", icon: "🏹" },
   "rocket-grab-5": { name: "ロケットグラブ (直線5マス・引き寄せ)", kind: "trait", color: "#ffcc44", icon: "🪝" },
   "death-rage":    { name: "死亡時 3T 怒り (ATK×2)", kind: "trait", color: "#ff5544", icon: "👹" },
@@ -1624,7 +1614,7 @@ function defaultAbilitiesFor(type, isBoss) {
   } else if (type === "ogre") {
     list.push("death-rage");
   } else if (type === "knight") {
-    list.push("damage-cap-5");
+    list.push("damage-taken-cap-5");
   } else if (type === "wraith") {
     list.push("hide-aura-3");
   } else if (type === "phantomwraith") {
@@ -1736,10 +1726,11 @@ const GIANT_TURTLE_STATS = {
   dropPool: ["subwoofer", "badassdriver", "tubedriver", "stack", "gigadelay"],
 };
 
-// 盾の騎士: 自身の 3×3 内にいるプレイヤーが受けるダメージを 5 にキャップする支援系。
-// HP は控えめだが、隣接戦闘で道連れにする「壁役」ポジション。
+// 盾の騎士: 鉄壁の盾で被ダメを 5 に上限化する硬い前衛。
+// HP は控えめだが、1 撃あたりの上限があるので単発火力は通らず、
+// 連撃 (Tremolo/Delay) や状態異常 (Phaser 凍結) でじわじわ削るのが正解。
 const KNIGHT_STATS = {
-  hp: 50, atk: 2,
+  hp: 50, atk: 5,
   dropChance: 0.60,
   dropPool: ["preamp", "body", "cabsim", "lift"],
 };
@@ -2227,7 +2218,7 @@ function enemyFlavorText(e) {
     case "ogre":    return "倒しても3ターンは怒り狂って暴れ回る、頑丈な鬼。最後の一発に気をつけろ。";
     case "wraith":  return "周囲3×3の仲間を幻惑のオーラで隠す怨霊。隣の敵が誰なのか、本人を倒すまで見えない。";
     case "phantomwraith": return "5×5の広域に幻惑を撒く上位種。HPも正体も判別不能の包囲網を作るやばい奴。";
-    case "knight":  return "誇り高き盾の騎士。3×3 内の味方 (この場合は強敵) を庇い、プレイヤーへのダメージを 5 に抑え込む。攻撃力自体は控えめ、優先的に処理したい。";
+    case "knight":  return "誇り高き盾の騎士。鉄壁の盾で受けるダメージを毎回 5 に上限する。HP は 50 と多くないが、単発火力では削れない。連撃や凍結で時間をかけて処理しよう。";
     default:        return "詳細情報なし。倒して調査せよ。";
   }
 }
@@ -3066,8 +3057,6 @@ function renderMap() {
   else if (pits.has(pkey)) pt.classList.add("on-pit-bg");
   // 人面樹に縛られていれば縛りマークを表示
   if (adjacentRootBinder(player.x, player.y)) pt.classList.add("root-bound");
-  // 盾の騎士の 3×3 内なら守護中マークを表示
-  if (isShieldedByKnight()) pt.classList.add("shielded");
   pt.innerHTML = playerSvg(player.facing);
   // --- 向き矢印 (上下左右いずれにも対応する追加 indicator) ---
   const fkey = `${player.facing.dx},${player.facing.dy}`;
@@ -4049,7 +4038,11 @@ async function doAttack(attackKey) {
         dmgF += Math.ceil(enemy.hpMax * (atk.compress / 100));
       }
 
-      const dmgComputed = Math.max(0, Math.floor(dmgF));
+      let dmgComputed = Math.max(0, Math.floor(dmgF));
+      // 盾の騎士: 1 攻撃あたりの被ダメを 5 に上限化 (連撃・凍結で攻略)
+      if (enemy.abilities && enemy.abilities.includes("damage-taken-cap-5") && dmgComputed > 5) {
+        dmgComputed = 5;
+      }
       // 怒り中は無敵: ダメージ 0 として処理 (フロート表示も 0、HP も不変)。
       const dmg = enemy.rage ? 0 : dmgComputed;
       const before = enemy.hp;
@@ -4134,7 +4127,6 @@ async function doAttack(attackKey) {
           counter = enemy.counter != null ? enemy.counter : 2;
         }
         if (counter > 0) {
-          counter = applyKnightDamageCap(counter);
           player.hp -= counter;
           showFloatingDamage(player.x, player.y, counter, "");
           spawnHurtFx(player.x, player.y);
@@ -4253,27 +4245,10 @@ function isCellBlockedForEnemy(self, x, y) {
   return false;
 }
 
-// 盾の騎士: いずれかの生存中 knight の 3×3 内にプレイヤーがいるか?
-function isShieldedByKnight() {
-  for (const e of enemies) {
-    if (e.hp <= 0) continue;
-    if (!e.abilities || !e.abilities.includes("damage-cap-5")) continue;
-    if (Math.abs(e.x - player.x) <= 1 && Math.abs(e.y - player.y) <= 1) return true;
-  }
-  return false;
-}
-
-// 守護中なら被ダメを 5 に上限。
-function applyKnightDamageCap(dmg) {
-  if (dmg <= 5) return dmg;
-  return isShieldedByKnight() ? 5 : dmg;
-}
-
 function enemyAttackPlayer(enemy) {
   let dmg = enemy.atk != null ? enemy.atk : ENEMY_ATK;
   // 怒り状態中は ATK ×2 (death-rage の効果)
   if (enemy.rage) dmg *= 2;
-  dmg = applyKnightDamageCap(dmg);
   player.hp -= dmg;
   showFloatingDamage(player.x, player.y, dmg, "");
 
@@ -4324,8 +4299,7 @@ function tryArcherShoot(archer) {
 }
 
 function archerShoot(archer, dir, dist) {
-  let dmg = archer.atk != null ? archer.atk : ENEMY_ATK;
-  dmg = applyKnightDamageCap(dmg);
+  const dmg = archer.atk != null ? archer.atk : ENEMY_ATK;
   spawnArrowFx(archer.x, archer.y, dir, dist);
   player.hp -= dmg;
   showFloatingDamage(player.x, player.y, dmg, "");
@@ -4369,8 +4343,7 @@ function tryCrankGrab(enemy) {
 }
 
 function crankGrab(enemy, dir, dist) {
-  let dmg = enemy.atk != null ? enemy.atk : ENEMY_ATK;
-  dmg = applyKnightDamageCap(dmg);
+  const dmg = enemy.atk != null ? enemy.atk : ENEMY_ATK;
   // フック飛行 → 着弾 → 引き戻し の順で演出
   spawnHookFx(enemy.x, enemy.y, dir, dist);
   player.hp -= dmg;
