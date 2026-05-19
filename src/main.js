@@ -165,6 +165,19 @@
       pointer-events: none;
       text-shadow: 0 0 4px #66dd44;
     }
+    /* 盾の騎士: プレイヤーが 3×3 内にいる間、右上に盾マーク + 黄金グロー */
+    .tile.enemy.shield-active::after {
+      content: "🛡";
+      position: absolute; top: -2px; right: -2px;
+      font-size: 12px; line-height: 1;
+      animation: rage-pulse 700ms ease-in-out infinite;
+      pointer-events: none;
+      text-shadow: 0 0 6px #ffd866;
+      z-index: 2;
+    }
+    .tile.enemy.shield-active {
+      box-shadow: inset 0 0 10px rgba(255, 216, 102, 0.45) !important;
+    }
 
     /* ===== 視認性強化（タイル上の overlays） ===== */
     .tile { position: relative; }
@@ -1570,7 +1583,7 @@ function recomputePlayerHpMax() {
 //   "counter-thorn"  攻撃を受けると反射ダメージ (値は enemy.counter)
 //   "rooted"         押し出し (Pusher / pushback) 無効
 //   "root-bind"      隣接時、プレイヤーの移動を阻止する (攻撃と向き変更は可)
-//   "damage-taken-cap-5" この敵が一度に受けるダメージは 5 に上限
+//   "damage-taken-cap-5" 自身の 3×3 内にプレイヤーがいる時に限り、受けるダメージを 5 に上限
 //   "ranged-3"       遠隔3マス矢攻撃 (アーチャー)
 const ENEMY_ABILITIES = {
   "weak-fire":     { name: "炎弱点 ×2",      kind: "weak",   color: "#ff9966", icon: "⚠" },
@@ -1586,7 +1599,7 @@ const ENEMY_ABILITIES = {
   "counter-thorn-storm": { name: "棘嵐 (連撃で倍化反射 4→8→16→32...)", kind: "trait", color: "#ff6644", icon: "✦" },
   "rooted":        { name: "押し出し無効",    kind: "trait",  color: "#aaffaa", icon: "⚓" },
   "root-bind":     { name: "根縛り (隣接で移動阻止)", kind: "trait", color: "#88dd88", icon: "🪢" },
-  "damage-taken-cap-5": { name: "鉄壁の盾 (被ダメを 5 に上限)", kind: "trait", color: "#ffd866", icon: "🛡" },
+  "damage-taken-cap-5": { name: "鉄壁の盾 (3×3 内のプレイヤーから被ダメを 5 に上限)", kind: "trait", color: "#ffd866", icon: "🛡" },
   "ranged-3":      { name: "遠隔3マス (矢)",  kind: "trait",  color: "#ffaaff", icon: "🏹" },
   "rocket-grab-5": { name: "ロケットグラブ (直線5マス・引き寄せ)", kind: "trait", color: "#ffcc44", icon: "🪝" },
   "death-rage":    { name: "死亡時 3T 怒り (ATK×2)", kind: "trait", color: "#ff5544", icon: "👹" },
@@ -1726,9 +1739,9 @@ const GIANT_TURTLE_STATS = {
   dropPool: ["subwoofer", "badassdriver", "tubedriver", "stack", "gigadelay"],
 };
 
-// 盾の騎士: 鉄壁の盾で被ダメを 5 に上限化する硬い前衛。
-// HP は控えめだが、1 撃あたりの上限があるので単発火力は通らず、
-// 連撃 (Tremolo/Delay) や状態異常 (Phaser 凍結) でじわじわ削るのが正解。
+// 盾の騎士: 自身の 3×3 内にプレイヤーがいる時に限り、受けるダメージを 5 に上限化。
+// 範囲外から殴れば通常通り通る (ロングアーム / アーチャー狙撃 / Tremolo 連撃で
+// 自分が遠くから攻める等)。接近戦では単発火力が止まるタンク。
 const KNIGHT_STATS = {
   hp: 50, atk: 5,
   dropChance: 0.60,
@@ -2218,7 +2231,7 @@ function enemyFlavorText(e) {
     case "ogre":    return "倒しても3ターンは怒り狂って暴れ回る、頑丈な鬼。最後の一発に気をつけろ。";
     case "wraith":  return "周囲3×3の仲間を幻惑のオーラで隠す怨霊。隣の敵が誰なのか、本人を倒すまで見えない。";
     case "phantomwraith": return "5×5の広域に幻惑を撒く上位種。HPも正体も判別不能の包囲網を作るやばい奴。";
-    case "knight":  return "誇り高き盾の騎士。鉄壁の盾で受けるダメージを毎回 5 に上限する。HP は 50 と多くないが、単発火力では削れない。連撃や凍結で時間をかけて処理しよう。";
+    case "knight":  return "誇り高き盾の騎士。自身を中心とする 3×3 内にプレイヤーがいる間、構えた盾で被ダメージを 5 に上限する (盾マークが点る)。範囲外からの遠隔・直線攻撃には無防備。接近戦では連撃や凍結で削るしかない。";
     default:        return "詳細情報なし。倒して調査せよ。";
   }
 }
@@ -3005,10 +3018,13 @@ function renderMap() {
     if (e.hp <= 0) continue;
     const t = tileAt(e.x, e.y);
     const hidden = isEnemyHiddenByWraith(e);
+    const shieldActive = !hidden && e.abilities && e.abilities.includes("damage-taken-cap-5")
+                         && Math.abs(e.x - player.x) <= 1 && Math.abs(e.y - player.y) <= 1;
     t.className = "tile enemy enemy-" + (hidden ? "hidden" : e.type)
                   + (hidden ? " hidden-by-wraith" : "")
                   + (!hidden && e.isBoss ? " boss" : "")
-                  + (!hidden && e.rage ? " rage" : "");
+                  + (!hidden && e.rage ? " rage" : "")
+                  + (shieldActive ? " shield-active" : "");
     t.innerHTML = hidden ? hiddenEnemySvg() : enemySvg(e);
     t._enemy = e;
     if (!hidden) {
@@ -4039,8 +4055,13 @@ async function doAttack(attackKey) {
       }
 
       let dmgComputed = Math.max(0, Math.floor(dmgF));
-      // 盾の騎士: 1 攻撃あたりの被ダメを 5 に上限化 (連撃・凍結で攻略)
-      if (enemy.abilities && enemy.abilities.includes("damage-taken-cap-5") && dmgComputed > 5) {
+      // 盾の騎士: 自身の 3×3 内にプレイヤーがいる間だけ、被ダメを 5 に上限化。
+      // (範囲外から殴れば通常通り通る — ロングアーム射撃 / 押し出して間合いを取る 等で攻略)
+      if (
+        enemy.abilities && enemy.abilities.includes("damage-taken-cap-5") &&
+        Math.abs(enemy.x - player.x) <= 1 && Math.abs(enemy.y - player.y) <= 1 &&
+        dmgComputed > 5
+      ) {
         dmgComputed = 5;
       }
       // 怒り中は無敵: ダメージ 0 として処理 (フロート表示も 0、HP も不変)。
