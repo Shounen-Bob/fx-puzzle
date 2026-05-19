@@ -825,12 +825,12 @@
       text-align: center;
     }
 
-    /* ===== 1F チュートリアル吹き出し (敵を指す) ===== */
-    #tutorial-bubble {
+    /* ===== 1F チュートリアル吹き出し ===== */
+    .tutorial-bubble {
       position: absolute;
       z-index: 60;
-      max-width: 240px;
-      padding: 10px 12px;
+      max-width: 260px;
+      padding: 10px 22px 10px 12px;
       background: linear-gradient(180deg, #fff8d6, #ffe8a3);
       color: #2a2200;
       font-size: 13px;
@@ -841,8 +841,9 @@
       pointer-events: auto;
       animation: tut-bob 1.6s ease-in-out infinite;
     }
-    #tutorial-bubble b { color: #8a5b00; }
-    #tutorial-bubble::before {
+    .tutorial-bubble b { color: #8a5b00; }
+    /* 既定: 左側に矢印 (タイルの右側に吹き出し) */
+    .tutorial-bubble::before {
       content: "";
       position: absolute;
       left: -10px;
@@ -852,7 +853,7 @@
       border-width: 10px 12px 10px 0;
       border-color: transparent #c9a531 transparent transparent;
     }
-    #tutorial-bubble::after {
+    .tutorial-bubble::after {
       content: "";
       position: absolute;
       left: -7px;
@@ -862,7 +863,20 @@
       border-width: 8px 10px 8px 0;
       border-color: transparent #ffe8a3 transparent transparent;
     }
-    #tutorial-bubble .tut-close {
+    /* point-left: 右側に矢印 (タイルの左側に吹き出し) */
+    .tutorial-bubble.point-left::before {
+      left: auto;
+      right: -10px;
+      border-width: 10px 0 10px 12px;
+      border-color: transparent transparent transparent #c9a531;
+    }
+    .tutorial-bubble.point-left::after {
+      left: auto;
+      right: -7px;
+      border-width: 8px 0 8px 10px;
+      border-color: transparent transparent transparent #ffe8a3;
+    }
+    .tutorial-bubble .tut-close {
       position: absolute;
       top: 2px; right: 6px;
       cursor: pointer;
@@ -870,7 +884,7 @@
       color: #8a5b00;
       line-height: 1;
     }
-    #tutorial-bubble .tut-close:hover { color: #c9a531; }
+    .tutorial-bubble .tut-close:hover { color: #c9a531; }
     @keyframes tut-bob {
       0%, 100% { transform: translateY(0); }
       50%      { transform: translateY(-3px); }
@@ -3344,50 +3358,90 @@ function renderAll() {
   renderEnemyStatus();
   renderArmIndicator();
   renderStatusBanner();
-  renderTutorialBubble();
+  renderTutorialBubbles();
   boardPanel.classList.toggle("locked", !isOnPit());
 }
 
 // ========================================================================
-// 1F チュートリアル吹き出し: 敵にマウスオーバーで詳細が見れることを教える
+// 1F チュートリアル吹き出し
+//   - enemy: 敵にマウスオーバーで詳細が見れることを教える
+//   - pit:   ピット上ではペダルの付け外しができ、通過で消えることを教える
 // ========================================================================
-let tutorialBubbleDismissed = false;
-function renderTutorialBubble() {
-  let bubble = document.getElementById("tutorial-bubble");
-  // 1F以外、または dismissed なら非表示
-  if (currentFloorIdx !== 0 || tutorialBubbleDismissed) {
-    if (bubble) bubble.remove();
-    return;
+const tutorialDismissed = { enemy: false, pit: false };
+
+function findFirstPit() {
+  for (const key of pits) {
+    const [xs, ys] = key.split(",");
+    return { x: +xs, y: +ys };
   }
-  const target = enemies.find((e) => e.hp > 0);
-  if (!target) {
-    if (bubble) bubble.remove();
-    return;
-  }
-  const tile = tileAt(target.x, target.y);
-  if (!tile) return;
-  if (!bubble) {
-    bubble = document.createElement("div");
-    bubble.id = "tutorial-bubble";
-    bubble.innerHTML =
-      '<span class="tut-close" title="閉じる">✕</span>' +
-      '<b>💡 ヒント:</b> 敵タイルに<b>マウスを乗せる</b>と、' +
-      'HP / 属性耐性 / 特殊能力 などの詳細が見られます。';
-    document.body.appendChild(bubble);
-    bubble.querySelector(".tut-close").addEventListener("click", () => {
-      tutorialBubbleDismissed = true;
-      bubble.remove();
-    });
-  }
-  // 位置: 敵タイルの右側、吹き出しの中央を敵の中央に合わせる
+  return null;
+}
+
+function placeBubble(bubble, tile) {
+  // 既定: タイル右側に置く。右端で切れるなら左に出して矢印を反転
   const rect = tile.getBoundingClientRect();
-  const bx = rect.right + window.scrollX + 14;
-  const by = rect.top + window.scrollY + rect.height / 2 - bubble.offsetHeight / 2;
+  const bw = bubble.offsetWidth;
+  const bh = bubble.offsetHeight;
+  const margin = 14;
+  const wantRight = rect.right + margin + bw < window.innerWidth - 8;
+  bubble.classList.toggle("point-left", !wantRight);
+  const bx = wantRight
+    ? rect.right + window.scrollX + margin
+    : rect.left + window.scrollX - margin - bw;
+  const by = rect.top + window.scrollY + rect.height / 2 - bh / 2;
   bubble.style.left = `${bx}px`;
   bubble.style.top = `${Math.max(window.scrollY + 8, by)}px`;
 }
+
+function renderOneBubble(id, key, html, getTile) {
+  let bubble = document.getElementById(id);
+  if (currentFloorIdx !== 0 || tutorialDismissed[key]) {
+    if (bubble) bubble.remove();
+    return;
+  }
+  const tile = getTile();
+  if (!tile) {
+    if (bubble) bubble.remove();
+    return;
+  }
+  if (!bubble) {
+    bubble = document.createElement("div");
+    bubble.id = id;
+    bubble.className = "tutorial-bubble";
+    bubble.innerHTML = '<span class="tut-close" title="閉じる">✕</span>' + html;
+    document.body.appendChild(bubble);
+    bubble.querySelector(".tut-close").addEventListener("click", () => {
+      tutorialDismissed[key] = true;
+      bubble.remove();
+    });
+  }
+  placeBubble(bubble, tile);
+}
+
+function renderTutorialBubbles() {
+  renderOneBubble(
+    "tutorial-bubble-enemy",
+    "enemy",
+    '<b>💡 ヒント:</b> 敵タイルに<b>マウスを乗せる</b>と、' +
+      'HP / 属性耐性 / 特殊能力 などの詳細が見られます。',
+    () => {
+      const e = enemies.find((en) => en.hp > 0);
+      return e ? tileAt(e.x, e.y) : null;
+    }
+  );
+  renderOneBubble(
+    "tutorial-bubble-pit",
+    "pit",
+    '<b>🕳 ピット:</b> この上にいる間だけ、武器に装着済みの<b>ペダルを付け外し</b>できます。' +
+      '<br><b>一度通過すると崩れて消える</b>ので、編集のタイミングは慎重に。',
+    () => {
+      const p = findFirstPit();
+      return p ? tileAt(p.x, p.y) : null;
+    }
+  );
+}
 window.addEventListener("resize", () => {
-  if (typeof renderTutorialBubble === "function") renderTutorialBubble();
+  if (typeof renderTutorialBubbles === "function") renderTutorialBubbles();
 });
 
 // ========================================================================
