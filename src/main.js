@@ -156,6 +156,15 @@
       animation: rage-pulse 700ms ease-in-out infinite;
       pointer-events: none;
     }
+    /* 人面樹に縛られて移動不可なプレイヤー: 右上に縛りマーク */
+    .tile.player.root-bound::after {
+      content: "🪢";
+      position: absolute; top: -2px; right: -2px;
+      font-size: 12px; line-height: 1;
+      animation: rage-pulse 700ms ease-in-out infinite;
+      pointer-events: none;
+      text-shadow: 0 0 4px #66dd44;
+    }
 
     /* ===== 視認性強化（タイル上の overlays） ===== */
     .tile { position: relative; }
@@ -1101,7 +1110,7 @@ const FLOORS = [
     enemyConfig: {
       neutral: { hp: 32, atk: 3, dropChance: 0.35, dropPool: ["delay", "gigadelay", "preamp", "lift"] },
       fire:    { hp: 35, atk: 3, dropChance: 0.40, dropPool: ["phaser", "tremolo", "booster", "compressor"] },
-      tree:    { hp: 48, atk: 3, dropChance: 0.45, dropPool: ["trim", "lift", "preamp", "stack"] },
+      tree:    { hp: 80, atk: 3, dropChance: 0.45, dropPool: ["trim", "lift", "preamp", "stack"] },
     },
   },
   {
@@ -1144,7 +1153,7 @@ const FLOORS = [
     enemyConfig: {
       neutral: { hp: 35, atk: 4, dropChance: 0.30, dropPool: ["overdrive", "booster", "lift", "powersupply"] },
       ice:     { hp: 38, atk: 4, dropChance: 0.40, dropPool: ["booster", "delay", "tripletter"] },
-      tree:    { hp: 55, atk: 4, dropChance: 0.40, dropPool: ["trim", "stack", "preamp", "powersupply"] },
+      tree:    { hp: 95, atk: 4, dropChance: 0.40, dropPool: ["trim", "stack", "preamp", "powersupply"] },
       boss:    { hp: 100, atk: 5, dropChance: 1.00, dropPool: ["overdrive", "stack", "tripletter", "pusher", "gigadelay"] },
     },
   },
@@ -1244,14 +1253,14 @@ const FLOORS = [
         "######################",
         "#.@..................#",
         "#....................#",
-        "#....................#",
+        "#...........W........#",
         "#..........J.........#",
         "#.A................I.#",
         "#.......?...?........#",
         "#..........B.........#",
         "#.......?...?........#",
         "#.Q..............X.F.#",
-        "#....................#",
+        "#........W...........#",
         "#....................#",
         "#.....P.............G#",
         "######################",
@@ -1262,10 +1271,10 @@ const FLOORS = [
         "#..........H.........#",
         "#.......##...........#",
         "#.......##....?......#",
-        "#....I.........Q.....#",
+        "#....I...W.....Q.....#",
         "#..........B.........#",
         "#....F.........I.....#",
-        "#......?.............#",
+        "#......?.....W.......#",
         "#.......##...........#",
         "#.......##...........#",
         "#............J.......#",
@@ -1277,7 +1286,7 @@ const FLOORS = [
       neutral: { hp: 50, atk: 5, dropChance: 0.25, dropPool: ["overdrive", "stack", "cut", "trim"] },
       fire:    { hp: 52, atk: 5, dropChance: 0.30, dropPool: ["phaser", "pusher", "compressor"] },
       ice:     { hp: 52, atk: 5, dropChance: 0.30, dropPool: ["pusher", "compressor"] },
-      tree:    { hp: 70, atk: 4, dropChance: 0.40, dropPool: ["trim", "stack", "preamp", "compressor"] },
+      tree:    { hp: 130, atk: 4, dropChance: 0.40, dropPool: ["trim", "stack", "preamp", "compressor"] },
       archer:  { hp: 35, atk: 4, dropChance: 0.45, dropPool: ["beam", "tripletter", "compressor", "preamp"] },
       boss:    { hp: 130, atk: 5, dropChance: 1.00, dropPool: ["stack", "gigadelay", "pusher", "tripletter", "overdrive"] },
     },
@@ -1295,7 +1304,7 @@ const FLOORS = [
         "#...##.....##........#",
         "#...##..?..##....?...#",
         "#....................#",
-        "#...##.....##........#",
+        "#...##.....##....W...#",
         "#...##.....##........#",
         "#....................#",
         "#..K.....W.....IR....#",
@@ -1314,7 +1323,7 @@ const FLOORS = [
         "#....#..######....Q..#",
         "#....#............F..#",
         "#....##############..#",
-        "#....................#",
+        "#.....W..........W...#",
         "#......P............G#",
         "######################",
       ],
@@ -1323,7 +1332,7 @@ const FLOORS = [
       fire: { hp: 58, atk: 6, dropChance: 0.30, dropPool: ["phaser", "stack", "preamp", "powersupply"] },
       ice:  { hp: 58, atk: 6, dropChance: 0.30, dropPool: ["stack", "preamp", "powersupply"] },
       thorn:  { hp: 62, atk: 3, counter: 8, dropChance: 0.40, dropPool: ["preamp", "cut", "trim", "stack"] },
-      tree:   { hp: 78, atk: 5, dropChance: 0.40, dropPool: ["trim", "stack", "preamp", "powersupply"] },
+      tree:   { hp: 150, atk: 5, dropChance: 0.40, dropPool: ["trim", "stack", "preamp", "powersupply"] },
       archer: { hp: 40, atk: 5, dropChance: 0.45, dropPool: ["beam", "tripletter", "compressor", "stack"] },
     },
   },
@@ -1343,7 +1352,7 @@ const FLOORS = [
         "#......##....##......#",
         "#..........J.........#",
         "#.I......A.........F.#",
-        "#....................#",
+        "#...W............W...#",
         "#.....P.............G#",
         "######################",
       ],
@@ -1359,7 +1368,7 @@ const FLOORS = [
         "#.I....##....##....Q.#",
         "#.........J..........#",
         "#......?......?......#",
-        "#....................#",
+        "#...W..........W.....#",
         "#....P..............G#",
         "######################",
       ],
@@ -1368,7 +1377,7 @@ const FLOORS = [
       fire: { hp: 70, atk: 6, dropChance: 0.30, dropPool: ["phaser", "stack", "gigadelay", "preamp"] },
       ice:  { hp: 70, atk: 6, dropChance: 0.30, dropPool: ["stack", "gigadelay", "powersupply"] },
       thorn:  { hp: 75, atk: 4, counter: 10, dropChance: 0.50, dropPool: ["preamp", "cut", "trim", "stack", "gigadelay"] },
-      tree:   { hp: 90, atk: 5, dropChance: 0.45, dropPool: ["trim", "stack", "preamp", "gigadelay"] },
+      tree:   { hp: 180, atk: 5, dropChance: 0.45, dropPool: ["trim", "stack", "preamp", "gigadelay"] },
       archer: { hp: 48, atk: 5, dropChance: 0.50, dropPool: ["beam", "tripletter", "stack", "compressor", "preamp"] },
       boss: { hp: 200, atk: 7, dropChance: 1.00, dropPool: ["stack", "gigadelay", "tripletter", "pusher", "compressor", "overdrive", "aurashot", "beam"] },
     },
@@ -1560,6 +1569,7 @@ function recomputePlayerHpMax() {
 //   "immune-<stat>"  状態異常無効 (burn/freeze/shock)
 //   "counter-thorn"  攻撃を受けると反射ダメージ (値は enemy.counter)
 //   "rooted"         押し出し (Pusher / pushback) 無効
+//   "root-bind"      隣接時、プレイヤーの移動を阻止する (攻撃と向き変更は可)
 //   "ranged-3"       遠隔3マス矢攻撃 (アーチャー)
 const ENEMY_ABILITIES = {
   "weak-fire":     { name: "炎弱点 ×2",      kind: "weak",   color: "#ff9966", icon: "⚠" },
@@ -1574,6 +1584,7 @@ const ENEMY_ABILITIES = {
   "counter-thorn": { name: "棘 (反撃)",       kind: "trait",  color: "#ffaa66", icon: "✦" },
   "counter-thorn-storm": { name: "棘嵐 (連撃で倍化反射 4→8→16→32...)", kind: "trait", color: "#ff6644", icon: "✦" },
   "rooted":        { name: "押し出し無効",    kind: "trait",  color: "#aaffaa", icon: "⚓" },
+  "root-bind":     { name: "根縛り (隣接で移動阻止)", kind: "trait", color: "#88dd88", icon: "🪢" },
   "ranged-3":      { name: "遠隔3マス (矢)",  kind: "trait",  color: "#ffaaff", icon: "🏹" },
   "rocket-grab-5": { name: "ロケットグラブ (直線5マス・引き寄せ)", kind: "trait", color: "#ffcc44", icon: "🪝" },
   "death-rage":    { name: "死亡時 3T 怒り (ATK×2)", kind: "trait", color: "#ff5544", icon: "👹" },
@@ -1593,7 +1604,7 @@ function defaultAbilitiesFor(type, isBoss) {
   } else if (type === "gianturtle") {
     list.push("counter-thorn-storm", "immune-burn", "rooted");
   } else if (type === "tree") {
-    list.push("rooted");
+    list.push("rooted", "root-bind");
   } else if (type === "archer") {
     list.push("ranged-3");
   } else if (type === "crankblitz") {
@@ -2989,6 +3000,8 @@ function renderMap() {
   const pkey = `${player.x},${player.y}`;
   if (goal.x === player.x && goal.y === player.y) pt.classList.add("on-goal-bg");
   else if (pits.has(pkey)) pt.classList.add("on-pit-bg");
+  // 人面樹に縛られていれば縛りマークを表示
+  if (adjacentRootBinder(player.x, player.y)) pt.classList.add("root-bound");
   pt.innerHTML = playerSvg(player.facing);
   // --- 向き矢印 (上下左右いずれにも対応する追加 indicator) ---
   const fkey = `${player.facing.dx},${player.facing.dy}`;
@@ -3623,8 +3636,25 @@ function isBlocked(x, y) {
   return isWall(x, y) || !!enemyAt(x, y);
 }
 
+// 隣接する root-bind 持ち (人面樹) を探す。1 体でもいれば移動不可。
+function adjacentRootBinder(x, y) {
+  const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+  for (const [dx, dy] of dirs) {
+    const e = enemyAt(x + dx, y + dy);
+    if (e && e.hp > 0 && e.abilities && e.abilities.includes("root-bind")) {
+      return e;
+    }
+  }
+  return null;
+}
+
 function tryMove(dx, dy) {
   player.facing = { dx, dy };
+  const binder = adjacentRootBinder(player.x, player.y);
+  if (binder) {
+    log(`🪢 ${enemyDisplayName(binder)} の根に縛られて動けない! (倒すまで移動不可)`, "lose");
+    return false;
+  }
   const nx = player.x + dx;
   const ny = player.y + dy;
   if (isBlocked(nx, ny)) return false;
