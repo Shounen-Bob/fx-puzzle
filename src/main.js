@@ -865,20 +865,48 @@
       50%      { transform: translateY(-1px); }
     }
     .baby-body { transform-origin: 50% 95%; animation: baby-idle 1.4s ease-in-out infinite; }
-    .tile.baby { font-size: 0; padding: 1px; background: #2a2228; }
+
+    /* 味方オーラ (赤ちゃん): 緑 */
+    @keyframes ally-aura {
+      0%, 100% { box-shadow: inset 0 0 8px rgba(126,217,87,0.55), 0 0 6px rgba(126,217,87,0.45); }
+      50%      { box-shadow: inset 0 0 14px rgba(126,217,87,0.85), 0 0 14px rgba(126,217,87,0.85); }
+    }
+    @keyframes ally-aura-glow {
+      0%, 100% { filter: drop-shadow(0 0 2px rgba(126,217,87,0.55)); }
+      50%      { filter: drop-shadow(0 0 7px rgba(126,217,87,1.0)); }
+    }
+    .tile.baby {
+      font-size: 0; padding: 1px; background: #1f2a1f;
+      animation: ally-aura 1.6s ease-in-out infinite;
+    }
+    .tile.baby > .char-svg { animation: ally-aura-glow 1.6s ease-in-out infinite, baby-idle 1.4s ease-in-out infinite; }
     .tile.baby.on-pit-bg  { background: #1a3a4a; }
     .tile.baby.on-goal-bg { background: #4a3a10; }
-    .tile.npc-knight { font-size: 0; padding: 1px; background: #3a2820; }
-    .tile.npc-mother { font-size: 0; padding: 1px; background: #2a2832; }
-    @keyframes knight-bleed {
-      0%, 100% { filter: drop-shadow(0 0 2px rgba(200,40,40,0.5)); }
-      50%      { filter: drop-shadow(0 0 6px rgba(220,60,60,0.85)); }
+
+    /* 話せる NPC オーラ: 黄色 */
+    @keyframes talkable-aura {
+      0%, 100% { box-shadow: inset 0 0 10px rgba(255,216,102,0.55), 0 0 6px rgba(255,216,102,0.5); }
+      50%      { box-shadow: inset 0 0 18px rgba(255,216,102,0.85), 0 0 16px rgba(255,216,102,0.95); }
     }
-    .tile.npc-knight > .char-svg { animation: knight-bleed 1.6s ease-in-out infinite; }
-    .tile.npc-mother > .char-svg {
-      animation: baby-idle 1.6s ease-in-out infinite;
-      filter: drop-shadow(0 0 4px rgba(255,200,180,0.45));
+    @keyframes talkable-aura-glow {
+      0%, 100% { filter: drop-shadow(0 0 3px rgba(255,216,102,0.55)); }
+      50%      { filter: drop-shadow(0 0 9px rgba(255,216,102,1.0)); }
     }
+    .tile.npc-knight {
+      font-size: 0; padding: 1px; background: #2a221a;
+      animation: talkable-aura 1.6s ease-in-out infinite;
+    }
+    .tile.npc-mother {
+      font-size: 0; padding: 1px; background: #2a2532;
+      animation: talkable-aura 1.6s ease-in-out infinite;
+    }
+    /* 騎士: 黄オーラ + ほんのり赤の血のグロー */
+    @keyframes knight-bleed-aura {
+      0%, 100% { filter: drop-shadow(0 0 3px rgba(255,216,102,0.55)) drop-shadow(0 0 2px rgba(200,40,40,0.55)); }
+      50%      { filter: drop-shadow(0 0 9px rgba(255,216,102,1.0))  drop-shadow(0 0 6px rgba(220,60,60,0.95)); }
+    }
+    .tile.npc-knight > .char-svg { animation: knight-bleed-aura 1.6s ease-in-out infinite; }
+    .tile.npc-mother > .char-svg { animation: talkable-aura-glow 1.6s ease-in-out infinite, baby-idle 1.6s ease-in-out infinite; }
 
     /* 赤ちゃん HP ミニバー (タイル下端、ピンク系) */
     .tile-hp-fill-baby { background: #ff88bb; }
@@ -3332,22 +3360,53 @@ function babySvg() {
   );
 }
 
-// ===== NPC: 瀕死の騎士 SVG (倒れ伏し、血だまり) =====
+// ===== NPC: 瀕死の騎士 SVG =====
+// 構図: 跪いて剣を地面に立てて支えにし、左に大盾、頭を垂れた騎士。
+// 兜のバイザー / 赤い羽根 / 鎧の十字紋 / 大盾の赤十字でひと目で「騎士」と分かるよう
+// シルエットを正面寄り垂直に取り、足元に血だまりで「瀕死」を表現。
 function dyingKnightSvg() {
   return (
     `<svg class="char-svg" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">` +
       // 血だまり
-      `<ellipse cx="17" cy="26" rx="11" ry="3" fill="#882233" opacity="0.65"/>` +
-      // 横たわる胴 (寝そべり)
-      `<rect x="6" y="20" width="20" height="6" rx="2.5" fill="#9a8a5a" stroke="#3a2a10" stroke-width="0.7"/>` +
-      // 兜
-      `<ellipse cx="9" cy="20" rx="4.5" ry="3.5" fill="#bbb0a0" stroke="#3a2a10" stroke-width="0.7"/>` +
-      `<rect x="5" y="19" width="9" height="1.4" fill="#5a4a3a"/>` +
-      // 羽根 (赤、しおれた感じで斜め)
-      `<path d="M 9 17 Q 7 13, 4 12 L 5 15 L 5.5 17" fill="#cc3344" stroke="#3a1010" stroke-width="0.5"/>` +
-      // 盾 (倒れた)
-      `<rect x="20" y="17" width="7" height="9" rx="1.2" fill="#cca844" stroke="#3a2a10" stroke-width="0.7"/>` +
-      `<path d="M 23.5 19 L 23.5 24 M 21.5 21.5 L 25.5 21.5" stroke="#3a2a10" stroke-width="0.6"/>` +
+      `<ellipse cx="16" cy="29" rx="10" ry="2.2" fill="#7a1f30" opacity="0.75"/>` +
+      // 剣 (右側、地面に突き刺さって支柱化)
+      `<rect x="22.1" y="9"   width="1.4" height="20" fill="#dadfe6" stroke="#2a1810" stroke-width="0.4"/>` +
+      // クロスガード (鍔)
+      `<rect x="19.2" y="10.6" width="6.4" height="1.4" rx="0.3" fill="#cc9a3a" stroke="#2a1810" stroke-width="0.35"/>` +
+      // グリップ (柄)
+      `<rect x="22.2" y="6.6"  width="1.4" height="4" fill="#4a2d12"/>` +
+      // ポメル (柄頭)
+      `<circle cx="22.9" cy="6.3" r="1.2" fill="#e5b840" stroke="#2a1810" stroke-width="0.35"/>` +
+      // 体 (鎧の胴、やや右に傾いて剣に体重を預ける)
+      `<path d="M 8 17 L 21 17 L 22 27 L 9 27 Z" fill="#a8aeb8" stroke="#2a1810" stroke-width="0.6"/>` +
+      // 胴の縁ライン (鎧感)
+      `<path d="M 8 17 L 21 17" stroke="#5a606a" stroke-width="0.5"/>` +
+      `<path d="M 9 21 L 22 21" stroke="#5a606a" stroke-width="0.4" opacity="0.7"/>` +
+      // 紋章 (赤十字)
+      `<path d="M 15.5 19 L 15.5 25.5 M 13.5 22 L 17.5 22" stroke="#c8334a" stroke-width="1.0"/>` +
+      // 肩当て
+      `<ellipse cx="8.5"  cy="17" rx="2.4" ry="1.6" fill="#7c828c" stroke="#2a1810" stroke-width="0.5"/>` +
+      `<ellipse cx="21.5" cy="17" rx="2.4" ry="1.6" fill="#7c828c" stroke="#2a1810" stroke-width="0.5"/>` +
+      // 剣を握る右腕
+      `<path d="M 20.5 17.5 L 22.6 11.5" stroke="#9aa0aa" stroke-width="2.2" stroke-linecap="round"/>` +
+      // 兜 (頭、やや下向きに俯いた感じ)
+      `<path d="M 11 9.5 Q 11 4, 16 4 Q 21 4, 21 9.5 L 21 16 L 11 16 Z" fill="#c8ced8" stroke="#2a1810" stroke-width="0.6"/>` +
+      // バイザー (横スリット)
+      `<rect x="12" y="10.5" width="8" height="0.9" fill="#1a1a20"/>` +
+      `<rect x="12" y="12.8" width="8" height="0.9" fill="#1a1a20"/>` +
+      // ノーズガード (中央の縦帯)
+      `<rect x="15.5" y="10.5" width="1" height="5" fill="#8a909a" stroke="#2a1810" stroke-width="0.3"/>` +
+      // 羽根 (赤、しおれた感じで左斜め上)
+      `<path d="M 16 4 Q 12 -0.5, 7 1.5 L 10.5 3 L 12 4.2 Z" fill="#c8334a" stroke="#2a1010" stroke-width="0.4"/>` +
+      `<path d="M 10 2.4 Q 9 1.5, 8 2" stroke="#7a1828" stroke-width="0.4" fill="none"/>` +
+      // 大盾 (左、地に立てる)
+      `<path d="M 1 16.5 L 7 16.5 L 7 24.5 Q 7 27.5, 4 28.5 Q 1 27.5, 1 24.5 Z" fill="#cc9a3a" stroke="#2a1810" stroke-width="0.6"/>` +
+      // 盾の赤十字
+      `<path d="M 4 18.5 L 4 26.5 M 1.5 22 L 6.5 22" stroke="#c8334a" stroke-width="0.9"/>` +
+      // 盾の縁の鋲 (装飾)
+      `<circle cx="4" cy="17.5" r="0.4" fill="#4a2d12"/>` +
+      `<circle cx="2"   cy="22" r="0.35" fill="#4a2d12"/>` +
+      `<circle cx="6"   cy="22" r="0.35" fill="#4a2d12"/>` +
     `</svg>`
   );
 }
