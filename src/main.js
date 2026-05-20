@@ -2196,11 +2196,11 @@ const ENEMY_ABILITIES = {
   "damage-taken-cap-5": { name: "鉄壁の盾 (3×3 内のプレイヤーから被ダメを 5 に上限)", kind: "trait", color: "#ffd866", icon: "🛡" },
   "ranged-3":      { name: "遠隔3マス (矢)",  kind: "trait",  color: "#ffaaff", icon: "🏹" },
   "rocket-grab-5": { name: "ロケットグラブ (直線5マス・引き寄せ)", kind: "trait", color: "#ffcc44", icon: "🪝" },
-  "death-rage":    { name: "死亡時 3T 怒り (ATK×2)", kind: "trait", color: "#ff5544", icon: "👹" },
+  "death-rage":    { name: "死亡時 {rage}T 怒り (ATK×2)", kind: "trait", color: "#ff5544", icon: "👹" },
   "hide-aura-3":   { name: "幻惑オーラ 3×3 (周囲の敵を隠す)", kind: "trait", color: "#bb88ff", icon: "👁" },
   "hide-aura-5":   { name: "幻惑オーラ 5×5 (周囲の敵を隠す)", kind: "trait", color: "#dd66ff", icon: "👁" },
-  "quad-strike":   { name: "四連斬 (隣接で 1 ターンに 4 連撃)", kind: "trait", color: "#ff77aa", icon: "⚔" },
-  "parry-after-quad": { name: "完遂後パリィ (4 連が全弾命中で次ターン武器無効)", kind: "trait", color: "#ffd866", icon: "🛡" },
+  "quad-strike":   { name: "{quadStrike}連斬 (隣接で 1 ターンに {quadStrike} 連撃)", kind: "trait", color: "#ff77aa", icon: "⚔" },
+  "parry-after-quad": { name: "完遂後パリィ (連撃全弾命中で次ターン武器無効)", kind: "trait", color: "#ffd866", icon: "🛡" },
   "burrow-emerge-5": { name: "土遁 (5×5 内の対象の隣へ瞬間移動)", kind: "trait", color: "#8aaa66", icon: "🌀" },
 };
 
@@ -3056,8 +3056,8 @@ function enemyAbilitiesInfo(e) {
   const parts = e.abilities.map((id) => {
     const a = ENEMY_ABILITIES[id];
     if (!a) return `<span>${id}</span>`;
-    // 棘の反撃ダメージ値は enemy.counter から動的に注入
     let label = a.name;
+    // 棘の反撃ダメージ値は enemy.counter から動的に注入
     if (id === "counter-thorn" && e.counter != null) {
       label = `棘 (反撃 ${e.counter} ダメ)`;
     }
@@ -3065,7 +3065,15 @@ function enemyAbilitiesInfo(e) {
     if (id === "death-rage" && e.rage) {
       label = `怒り状態 残${e.rage.turnsLeft}T (ATK×2 / 無敵)`;
     }
-    return `<span style="color:${a.color}">${a.icon} ${label}</span>`;
+    // {key} プレースホルダを enemy.reds から置換し、青く強調 (Limiter で削れる赤字)
+    label = label.replace(/\{(\w+)\}/g, (m, k) => {
+      const v = e.reds && e.reds[k] != null ? e.reds[k] : null;
+      if (v === null) return m;
+      return `<b style="color:#88c0e0;text-shadow:0 0 4px rgba(136,192,224,0.55)">${v}</b>`;
+    });
+    // アイコンだけアビリティ色、本文はニュートラル色で読みやすく
+    return `<span style="color:#d4d4d4;line-height:1.55">` +
+           `<span style="color:${a.color};font-size:13px;margin-right:2px">${a.icon}</span> ${label}</span>`;
   });
   return parts.join("<br>");
 }
@@ -3112,23 +3120,12 @@ function showEnemyTooltip(e, anchorEl) {
   const color = ENEMY_TYPE_COLOR[e.type] || "#888";
   const status = enemyStatusLine(e);
   const flavor = enemyFlavorText(e);
-  // 能力赤字 (Limiter/NoiseGate で削れる数値) があれば一覧化
-  let redsLine = "";
-  if (e.reds && Object.keys(e.reds).length > 0) {
-    const parts = [];
-    for (const k of Object.keys(e.reds)) {
-      const label = REDS_LABEL[k] || k;
-      parts.push(`<span style="color:#88c0e0">${label} <b>${e.reds[k]}</b></span>`);
-    }
-    redsLine = `<div class="et-row" style="margin-top:4px"><span class="lbl">能力赤字</span>${parts.join(" / ")}</div>`;
-  }
   enemyTooltip.innerHTML =
     `<div class="et-title" style="color:${color}">${enemyTypeIcon(e)} ${enemyDisplayName(e)}</div>` +
     `<div class="et-row"><span class="lbl">HP</span>${Math.max(0, e.hp)} / ${e.hpMax}</div>` +
     `<div style="margin-top:6px;color:#d4d4d4;font-style:italic;font-size:11px;line-height:1.5">${escapeHtml(flavor)}</div>` +
     divider +
     `<div><div style="color:#888;font-size:10px;margin-bottom:4px;letter-spacing:1px">▼ 特殊能力</div>${enemyAbilitiesInfo(e)}</div>` +
-    redsLine +
     divider +
     `<div class="et-row"><span class="lbl">攻撃</span>${e.atk}</div>` +
     `<div class="et-row"><span class="lbl">ドロップ</span>${enemyDropInfo(e)}</div>` +
