@@ -1860,7 +1860,7 @@ const FLOORS = [
       [
         "######################",
         "#.@..................#",
-        "#..........m.........#",
+        "#....................#",
         "#.F......Q....W....I.#",
         "#....................#",
         "#......##....##......#",
@@ -1870,12 +1870,12 @@ const FLOORS = [
         "#..........J.........#",
         "#.I......A.........F.#",
         "#...W............W...#",
-        "#.....P.............G#",
+        "#.....P...........m.G#",
         "######################",
       ],
       [
         "######################",
-        "#......m.............#",
+        "#....................#",
         "#.@..................#",
         "#....................#",
         "#.F....##....##..X.I.#",
@@ -1886,7 +1886,7 @@ const FLOORS = [
         "#.........J..........#",
         "#......?......?......#",
         "#...W..........W.....#",
-        "#....P..............G#",
+        "#....P............m.G#",
         "######################",
       ],
     ],
@@ -6806,10 +6806,15 @@ async function performAction(actionFn) {
 function checkWin() {
   if (player.x === goal.x && player.y === goal.y && !gameOver) {
     log(`★ ${currentFloor.name} クリア！`, "win");
-    // 10F (idx 9) ゴール: 母の鍵が無ければラン完遂 (赤ちゃん死亡時 or 7F イベント未消化)。
-    // 鍵あり → 11F (idx 10) へ進む。
-    if (currentFloorIdx === 9 && !motherKey) {
-      showRunClear();
+    // 10F (idx 9) ゴール:
+    //   ・母の鍵あり → ★ True End (11F 以降は未実装のため告知だけ出して終了)
+    //   ・鍵なし     → 通常のラン完遂
+    if (currentFloorIdx === 9) {
+      if (motherKey) {
+        showTrueEnd();
+      } else {
+        showRunClear();
+      }
       return;
     }
     if (currentFloorIdx + 1 >= FLOORS.length) {
@@ -6820,6 +6825,29 @@ function checkWin() {
       loadFloor(currentFloorIdx + 1);
     }
   }
+}
+
+// True End: 赤ちゃんを母に届け、その先のフロアへの扉を開いた状態でゴール到達。
+// 現状 11F 以降は未実装なので、達成ご褒美バナー + 作成中の告知を出して終了。
+function showTrueEnd() {
+  gameOver = true;
+  log("★ True End — 赤ちゃんは母の元へ、あなたは奥への扉を開けた…", "win");
+  showGameEndBanner("★ TRUE END", "#ffd866");
+  setTimeout(() => {
+    showSystemDialog(
+      "★ True End へようこそ",
+      `<p>瀕死の騎士から託された赤ちゃんを、母の元へ無事届けることができました。</p>` +
+      `<p style="color:#ffd866">母から授かった鍵で、奥への扉が開いた――</p>` +
+      `<div style="margin-top:12px;padding:10px 12px;background:rgba(255,216,102,0.08);border-left:3px solid #ffd866;border-radius:4px">` +
+        `<b style="color:#ffd866">⚠ 11F 以降は現在作成中です</b><br>` +
+        `<span style="font-size:12px;line-height:1.55;color:#e6f3da">` +
+          `奥のダンジョン (11F 〜 20F) はまだ実装されていません。<br>` +
+          `今後のアップデートで実装予定です。お楽しみに!` +
+        `</span>` +
+      `</div>` +
+      `<p style="margin-top:10px;color:#cfcfcf;font-size:12px">F5 でリスタート、または D キーのデバッグメニューで他フロアへどうぞ。</p>`
+    );
+  }, 600);
 }
 
 function showGameEndBanner(text, color) {
