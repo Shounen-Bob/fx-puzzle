@@ -1496,7 +1496,7 @@ const FLOORS = [
       ],
     ],
     enemyConfig: {
-      neutral: { hp: 22, atk: 2, dropChance: 0.50, dropPool: ["phaser", "preamp", "sustainer"] },
+      neutral: { hp: 22, atk: 2, dropChance: 0.20, dropPool: ["phaser", "preamp", "sustainer"] },
     },
   },
   {
@@ -1537,10 +1537,10 @@ const FLOORS = [
       ],
     ],
     enemyConfig: {
-      neutral: { hp: 28, atk: 3, dropChance: 0.35, dropPool: ["delay", "lift", "gigadelay", "tripletter"] },
-      fire:    { hp: 30, atk: 3, dropChance: 0.45, dropPool: ["phaser", "delay", "booster", "compressor"] },
-      ice:     { hp: 30, atk: 3, dropChance: 0.45, dropPool: ["booster", "powersupply"] },
-      thorn:   { hp: 22, atk: 2, counter: 3, dropChance: 0.50, dropPool: ["preamp", "cut", "trim"] },
+      neutral: { hp: 28, atk: 3, dropChance: 0.18, dropPool: ["delay", "lift", "gigadelay", "tripletter"] },
+      fire:    { hp: 30, atk: 3, dropChance: 0.20, dropPool: ["phaser", "delay", "booster", "compressor"] },
+      ice:     { hp: 30, atk: 3, dropChance: 0.20, dropPool: ["booster", "powersupply"] },
+      thorn:   { hp: 22, atk: 2, counter: 3, dropChance: 0.22, dropPool: ["preamp", "cut", "trim"] },
     },
   },
   {
@@ -1581,9 +1581,9 @@ const FLOORS = [
       ],
     ],
     enemyConfig: {
-      fire: { hp: 35, atk: 3, dropChance: 0.30, dropPool: ["phaser", "overdrive", "push", "pusher"] },
-      ice:  { hp: 35, atk: 3, dropChance: 0.30, dropPool: ["overdrive", "push", "sustainer"] },
-      thorn: { hp: 32, atk: 2, counter: 4, dropChance: 0.45, dropPool: ["preamp", "cut", "trim", "lift"] },
+      fire: { hp: 35, atk: 3, dropChance: 0.15, dropPool: ["phaser", "overdrive", "push", "pusher"] },
+      ice:  { hp: 35, atk: 3, dropChance: 0.15, dropPool: ["overdrive", "push", "sustainer"] },
+      thorn: { hp: 32, atk: 2, counter: 4, dropChance: 0.22, dropPool: ["preamp", "cut", "trim", "lift"] },
       boss: { hp: 80, atk: 4, dropChance: 1.00, dropPool: ["stack", "overdrive", "beam", "aurashot", "tripletter", "pusher", "gigadelay"] },
     },
   },
@@ -1625,9 +1625,9 @@ const FLOORS = [
       ],
     ],
     enemyConfig: {
-      neutral: { hp: 32, atk: 3, dropChance: 0.35, dropPool: ["delay", "gigadelay", "preamp", "lift"] },
-      fire:    { hp: 35, atk: 3, dropChance: 0.40, dropPool: ["phaser", "tremolo", "booster", "compressor"] },
-      tree:    { hp: 80, atk: 3, dropChance: 0.45, dropPool: ["trim", "lift", "preamp", "stack"] },
+      neutral: { hp: 32, atk: 3, dropChance: 0.18, dropPool: ["delay", "gigadelay", "preamp", "lift"] },
+      fire:    { hp: 35, atk: 3, dropChance: 0.20, dropPool: ["phaser", "tremolo", "booster", "compressor"] },
+      tree:    { hp: 80, atk: 3, dropChance: 0.22, dropPool: ["trim", "lift", "preamp", "stack"] },
     },
   },
   {
@@ -1668,9 +1668,9 @@ const FLOORS = [
       ],
     ],
     enemyConfig: {
-      neutral: { hp: 35, atk: 4, dropChance: 0.30, dropPool: ["overdrive", "booster", "lift", "powersupply"] },
-      ice:     { hp: 38, atk: 4, dropChance: 0.40, dropPool: ["booster", "delay", "tripletter"] },
-      tree:    { hp: 95, atk: 4, dropChance: 0.40, dropPool: ["trim", "stack", "preamp", "powersupply"] },
+      neutral: { hp: 35, atk: 4, dropChance: 0.15, dropPool: ["overdrive", "booster", "lift", "powersupply"] },
+      ice:     { hp: 38, atk: 4, dropChance: 0.18, dropPool: ["booster", "delay", "tripletter"] },
+      tree:    { hp: 95, atk: 4, dropChance: 0.22, dropPool: ["trim", "stack", "preamp", "powersupply"] },
       boss:    { hp: 100, atk: 5, dropChance: 1.00, dropPool: ["overdrive", "stack", "tripletter", "pusher", "gigadelay"] },
     },
   },
@@ -1712,9 +1712,9 @@ const FLOORS = [
       ],
     ],
     enemyConfig: {
-      fire: { hp: 42, atk: 4, dropChance: 0.30, dropPool: ["phaser", "compressor", "overdrive", "preamp"] },
-      ice:  { hp: 42, atk: 4, dropChance: 0.30, dropPool: ["compressor", "overdrive", "preamp"] },
-      archer: { hp: 26, atk: 3, dropChance: 0.50, dropPool: ["beam", "aurashot", "tripletter", "tremolo"] },
+      fire: { hp: 42, atk: 4, dropChance: 0.15, dropPool: ["phaser", "compressor", "overdrive", "preamp"] },
+      ice:  { hp: 42, atk: 4, dropChance: 0.15, dropPool: ["compressor", "overdrive", "preamp"] },
+      archer: { hp: 26, atk: 3, dropChance: 0.25, dropPool: ["beam", "aurashot", "tripletter", "tremolo"] },
     },
   },
   {
@@ -1755,11 +1755,11 @@ const FLOORS = [
       ],
     ],
     enemyConfig: {
-      neutral: { hp: 45, atk: 4, dropChance: 0.30, dropPool: ["tremolo", "delay", "gigadelay", "stack"] },
-      fire:    { hp: 48, atk: 5, dropChance: 0.30, dropPool: ["phaser", "tremolo", "powersupply"] },
-      ice:     { hp: 48, atk: 5, dropChance: 0.30, dropPool: ["tremolo", "powersupply"] },
-      thorn:   { hp: 48, atk: 3, counter: 6, dropChance: 0.40, dropPool: ["preamp", "cut", "trim", "powersupply"] },
-      archer:  { hp: 30, atk: 4, dropChance: 0.45, dropPool: ["beam", "tripletter", "tremolo", "preamp"] },
+      neutral: { hp: 45, atk: 4, dropChance: 0.15, dropPool: ["tremolo", "delay", "gigadelay", "stack"] },
+      fire:    { hp: 48, atk: 5, dropChance: 0.15, dropPool: ["phaser", "tremolo", "powersupply"] },
+      ice:     { hp: 48, atk: 5, dropChance: 0.15, dropPool: ["tremolo", "powersupply"] },
+      thorn:   { hp: 48, atk: 3, counter: 6, dropChance: 0.22, dropPool: ["preamp", "cut", "trim", "powersupply"] },
+      archer:  { hp: 30, atk: 4, dropChance: 0.22, dropPool: ["beam", "tripletter", "tremolo", "preamp"] },
     },
   },
   {
@@ -1800,11 +1800,11 @@ const FLOORS = [
       ],
     ],
     enemyConfig: {
-      neutral: { hp: 50, atk: 5, dropChance: 0.25, dropPool: ["overdrive", "stack", "cut", "trim"] },
-      fire:    { hp: 52, atk: 5, dropChance: 0.30, dropPool: ["phaser", "pusher", "compressor"] },
-      ice:     { hp: 52, atk: 5, dropChance: 0.30, dropPool: ["pusher", "compressor"] },
-      tree:    { hp: 130, atk: 4, dropChance: 0.40, dropPool: ["trim", "stack", "preamp", "compressor"] },
-      archer:  { hp: 35, atk: 4, dropChance: 0.45, dropPool: ["beam", "tripletter", "compressor", "preamp"] },
+      neutral: { hp: 50, atk: 5, dropChance: 0.12, dropPool: ["overdrive", "stack", "cut", "trim"] },
+      fire:    { hp: 52, atk: 5, dropChance: 0.15, dropPool: ["phaser", "pusher", "compressor"] },
+      ice:     { hp: 52, atk: 5, dropChance: 0.15, dropPool: ["pusher", "compressor"] },
+      tree:    { hp: 130, atk: 4, dropChance: 0.22, dropPool: ["trim", "stack", "preamp", "compressor"] },
+      archer:  { hp: 35, atk: 4, dropChance: 0.22, dropPool: ["beam", "tripletter", "compressor", "preamp"] },
       boss:    { hp: 130, atk: 5, dropChance: 1.00, dropPool: ["stack", "gigadelay", "pusher", "tripletter", "overdrive"] },
     },
   },
@@ -1846,11 +1846,11 @@ const FLOORS = [
       ],
     ],
     enemyConfig: {
-      fire: { hp: 58, atk: 6, dropChance: 0.30, dropPool: ["phaser", "stack", "preamp", "powersupply"] },
-      ice:  { hp: 58, atk: 6, dropChance: 0.30, dropPool: ["stack", "preamp", "powersupply"] },
-      thorn:  { hp: 62, atk: 3, counter: 8, dropChance: 0.40, dropPool: ["preamp", "cut", "trim", "stack"] },
-      tree:   { hp: 150, atk: 5, dropChance: 0.40, dropPool: ["trim", "stack", "preamp", "powersupply"] },
-      archer: { hp: 40, atk: 5, dropChance: 0.45, dropPool: ["beam", "tripletter", "compressor", "stack"] },
+      fire: { hp: 58, atk: 6, dropChance: 0.15, dropPool: ["phaser", "stack", "preamp", "powersupply"] },
+      ice:  { hp: 58, atk: 6, dropChance: 0.15, dropPool: ["stack", "preamp", "powersupply"] },
+      thorn:  { hp: 62, atk: 3, counter: 8, dropChance: 0.22, dropPool: ["preamp", "cut", "trim", "stack"] },
+      tree:   { hp: 150, atk: 5, dropChance: 0.22, dropPool: ["trim", "stack", "preamp", "powersupply"] },
+      archer: { hp: 40, atk: 5, dropChance: 0.22, dropPool: ["beam", "tripletter", "compressor", "stack"] },
     },
   },
   {
@@ -1891,11 +1891,11 @@ const FLOORS = [
       ],
     ],
     enemyConfig: {
-      fire: { hp: 70, atk: 6, dropChance: 0.30, dropPool: ["phaser", "stack", "gigadelay", "preamp"] },
-      ice:  { hp: 70, atk: 6, dropChance: 0.30, dropPool: ["stack", "gigadelay", "powersupply"] },
-      thorn:  { hp: 75, atk: 4, counter: 10, dropChance: 0.50, dropPool: ["preamp", "cut", "trim", "stack", "gigadelay"] },
-      tree:   { hp: 180, atk: 5, dropChance: 0.45, dropPool: ["trim", "stack", "preamp", "gigadelay"] },
-      archer: { hp: 48, atk: 5, dropChance: 0.50, dropPool: ["beam", "tripletter", "stack", "compressor", "preamp"] },
+      fire: { hp: 70, atk: 6, dropChance: 0.15, dropPool: ["phaser", "stack", "gigadelay", "preamp"] },
+      ice:  { hp: 70, atk: 6, dropChance: 0.15, dropPool: ["stack", "gigadelay", "powersupply"] },
+      thorn:  { hp: 75, atk: 4, counter: 10, dropChance: 0.25, dropPool: ["preamp", "cut", "trim", "stack", "gigadelay"] },
+      tree:   { hp: 180, atk: 5, dropChance: 0.22, dropPool: ["trim", "stack", "preamp", "gigadelay"] },
+      archer: { hp: 48, atk: 5, dropChance: 0.25, dropPool: ["beam", "tripletter", "stack", "compressor", "preamp"] },
       boss: { hp: 200, atk: 7, dropChance: 1.00, dropPool: ["stack", "gigadelay", "tripletter", "pusher", "compressor", "overdrive", "aurashot", "beam"] },
     },
   },
@@ -2325,7 +2325,7 @@ const OGRE_STATS = {
 // レイス: 中堅 (ボススライム相当)。HP 80 / ATK 4 / 3×3 隠蔽オーラ。
 const WRAITH_STATS = {
   hp: 80, atk: 4,
-  dropChance: 0.75,
+  dropChance: 0.45,
   dropPool: ["phaser", "tremolo", "preamp"],
 };
 
@@ -2341,7 +2341,7 @@ const PHANTOM_WRAITH_STATS = {
 // 線を切る (壁/敵に遮らせる) か速攻で倒すしかない。
 const CRANK_BLITZ_STATS = {
   hp: 70, atk: 5,
-  dropChance: 0.85,
+  dropChance: 0.55,
   dropPool: ["pusher", "sustainer", "stack", "subwoofer"],
 };
 
@@ -2360,7 +2360,7 @@ const GIANT_TURTLE_STATS = {
 // 自分が遠くから攻める等)。接近戦では単発火力が止まるタンク。
 const KNIGHT_STATS = {
   hp: 50, atk: 5,
-  dropChance: 0.60,
+  dropChance: 0.35,
   dropPool: ["preamp", "body", "cabsim", "lift"],
 };
 
@@ -2370,7 +2370,7 @@ const KNIGHT_STATS = {
 // HP は中堅 (100)。範囲攻撃や凍結で四連を止められれば崩せる。
 const SAMURAI_STATS = {
   hp: 100, atk: 7,
-  dropChance: 0.85,
+  dropChance: 0.55,
   dropPool: ["tubedriver", "badassdriver", "stack", "tripletter", "preamp"],
 };
 
