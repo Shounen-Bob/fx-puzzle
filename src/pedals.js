@@ -70,6 +70,22 @@ const PEDALS = {
     apply(atk, red) { if (red > 0) atk.hits += red; },
   },
 
+  // ===== Value: 特殊能力デバフ (Limiter / NoiseGate) =====
+  // 命中ごとに対象の「能力 red」(enemy.reds の数値群) を 赤字 ぶん削る (下限 0)。
+  // 例: オーガの怒りターン数 / サムライの連撃数 など。
+  // atk.redDebuff にカウンタを乗せ、main.js 側の doAttack 内で実適用。
+  // 自身の赤字は modifier (Booster 等) で増減可能。Delay/GigaDelay で複数回適用も可。
+  limiter: {
+    id: "limiter", kind: "value",
+    red: 1, color: "#88c0e0", icon: "▾",
+    apply(atk, red) { if (red > 0) atk.redDebuff = (atk.redDebuff || 0) + red; },
+  },
+  noisegate: {
+    id: "noisegate", kind: "value",
+    red: 2, color: "#5588cc", icon: "▽",
+    apply(atk, red) { if (red > 0) atk.redDebuff = (atk.redDebuff || 0) + red; },
+  },
+
   // ===== Copy: 左隣の value ペダルを赤字回数ぶん追加適用する =====
   // ※ 解決ロジック側 (resolveChain) で扱う。apply 関数は持たない。
   delay: {

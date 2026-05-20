@@ -197,6 +197,12 @@
       font-size: 17px;
       text-shadow: 0 0 8px #7ed957, 0 0 12px #44aa66, 0 0 2px #000;
     }
+    /* 能力赤字デバフ表示 (Limiter / NoiseGate) */
+    .floating-damage.red-debuff {
+      color: #88c0e0;
+      font-size: 14px;
+      text-shadow: 0 0 6px #88c0e0, 0 0 10px #4488aa, 0 0 2px #000;
+    }
     /* Shimmer パリィ表示 */
     .floating-damage.shimmer-parry {
       color: #d4b8ff;
@@ -2198,6 +2204,21 @@ const ENEMY_ABILITIES = {
   "burrow-emerge-5": { name: "土遁 (5×5 内の対象の隣へ瞬間移動)", kind: "trait", color: "#8aaa66", icon: "🌀" },
 };
 
+// enemy.reds キー → 表示名 (tooltip / ログ用)
+// Limiter/NoiseGate で削れる「能力赤字」の人間可読ラベル。
+const REDS_LABEL = {
+  rage: "怒りT数",
+  quadStrike: "連撃数",
+};
+
+// 敵タイプ → 初期「能力赤字 (reds)」の初期値。
+// Limiter / NoiseGate で削れる数値群。何も持たない敵は {} を返す。
+function defaultRedsFor(type) {
+  if (type === "ogre")    return { rage: 3 };
+  if (type === "samurai") return { quadStrike: 4 };
+  return {};
+}
+
 // 敵タイプ → 初期 abilities 配列。spawn 時に enemy.abilities にコピーする。
 function defaultAbilitiesFor(type, isBoss) {
   const list = [];
@@ -2687,6 +2708,7 @@ function debugSpawnEnemy(type, isBoss) {
     dropPool: ec.dropPool || [],
     status: [],
     abilities: defaultAbilitiesFor(type, isBoss),
+    reds: defaultRedsFor(type),
   };
   if (type === "thorn") enemy.counter = ec.counter != null ? ec.counter : 2;
   enemies.push(enemy);
@@ -3090,12 +3112,23 @@ function showEnemyTooltip(e, anchorEl) {
   const color = ENEMY_TYPE_COLOR[e.type] || "#888";
   const status = enemyStatusLine(e);
   const flavor = enemyFlavorText(e);
+  // 能力赤字 (Limiter/NoiseGate で削れる数値) があれば一覧化
+  let redsLine = "";
+  if (e.reds && Object.keys(e.reds).length > 0) {
+    const parts = [];
+    for (const k of Object.keys(e.reds)) {
+      const label = REDS_LABEL[k] || k;
+      parts.push(`<span style="color:#88c0e0">${label} <b>${e.reds[k]}</b></span>`);
+    }
+    redsLine = `<div class="et-row" style="margin-top:4px"><span class="lbl">能力赤字</span>${parts.join(" / ")}</div>`;
+  }
   enemyTooltip.innerHTML =
     `<div class="et-title" style="color:${color}">${enemyTypeIcon(e)} ${enemyDisplayName(e)}</div>` +
     `<div class="et-row"><span class="lbl">HP</span>${Math.max(0, e.hp)} / ${e.hpMax}</div>` +
     `<div style="margin-top:6px;color:#d4d4d4;font-style:italic;font-size:11px;line-height:1.5">${escapeHtml(flavor)}</div>` +
     divider +
     `<div><div style="color:#888;font-size:10px;margin-bottom:4px;letter-spacing:1px">▼ 特殊能力</div>${enemyAbilitiesInfo(e)}</div>` +
+    redsLine +
     divider +
     `<div class="et-row"><span class="lbl">攻撃</span>${e.atk}</div>` +
     `<div class="et-row"><span class="lbl">ドロップ</span>${enemyDropInfo(e)}</div>` +
@@ -3316,6 +3349,7 @@ function parseMap() {
           dropPool: ec.dropPool || [],
           status: [],
           abilities: defaultAbilitiesFor(type, isBoss),
+          reds: defaultRedsFor(type),
         };
         // スパイカ専用フィールド: 攻撃を受けた時のカウンターダメージ
         if (type === "thorn") enemy.counter = ec.counter != null ? ec.counter : 2;
@@ -5896,13 +5930,15 @@ async function doAttack(attackKey) {
       enemy.hp -= dmg;
       // === death-rage 介入 ===
       // 致命傷で怒り状態へ突入 (まだ rage 中でない場合のみ)。HP は 1 に戻して、
-      // 3T カウントダウン中は無敵 (上の dmg=0 ガードで以降の追撃は素通し)。
+      // enemy.reds.rage T カウントダウン中は無敵 (上の dmg=0 ガードで以降の追撃は素通し)。
+      // Limiter / NoiseGate で reds.rage が 0 まで削られている場合は怒り発動せず即絶命。
       if (enemy.hp <= 0 && before > 0) {
         const hasRage = enemy.abilities && enemy.abilities.includes("death-rage");
-        if (hasRage && !enemy.rage) {
+        const rageTurns = (enemy.reds && enemy.reds.rage != null) ? enemy.reds.rage : 3;
+        if (hasRage && !enemy.rage && rageTurns > 0) {
           enemy.hp = 1;
-          enemy.rage = { turnsLeft: 3 };
-          log(`✦ ${enemyDisplayName(enemy)} が怒り状態に突入! ATK×2 / 3T 後に絶命`, "attack");
+          enemy.rage = { turnsLeft: rageTurns };
+          log(`✦ ${enemyDisplayName(enemy)} が怒り状態に突入! ATK×2 / ${rageTurns}T 後に絶命`, "attack");
         }
       }
       totalHits++;
@@ -5956,6 +5992,24 @@ async function doAttack(attackKey) {
 
       // === Passive: 命中ごとの hook (preamp 等) ===
       if (dmg > 0) applyOnHitPassives(attackKey);
+
+      // === 特殊能力デバフ (Limiter / NoiseGate): 敵の能力 red を atk.redDebuff ぶん削る ===
+      // 対象は enemy.reds (現状: rage=怒りT数 / quadStrike=連撃数 など)。
+      // 各 red を一律に -atk.redDebuff (下限 0)。複数 red がある敵は全て影響を受ける。
+      if (dmg > 0 && atk.redDebuff > 0 && enemy.hp > 0 && enemy.reds) {
+        const changes = [];
+        for (const k of Object.keys(enemy.reds)) {
+          const before = enemy.reds[k];
+          if (before <= 0) continue;
+          const after = Math.max(0, before - atk.redDebuff);
+          enemy.reds[k] = after;
+          if (after !== before) changes.push(`${REDS_LABEL[k] || k} ${before}→${after}`);
+        }
+        if (changes.length > 0) {
+          log(`▾ ${enemyDisplayName(enemy)} の能力赤字: ${changes.join(", ")}`, "win");
+          showRedDebuffFx(enemy.x, enemy.y);
+        }
+      }
 
       // === スパイカ系: ヒットされる度にカウンター ===
       //   とどめでも反射する (Shiren の棘鎧と同じ挙動)。
@@ -6400,12 +6454,16 @@ function enemyAct(enemy) {
   return "skipped";
 }
 
-// マスター・サムライ: 隣接時に 1 ターンで 4 連斬。
-//   4 ヒット全弾命中で次の自分のターン (= 次のプレイヤーターン) まで「パリィ」を予約。
+// マスター・サムライ: 隣接時に 1 ターンで N 連斬 (N = enemy.reds.quadStrike, 初期 4)。
+//   N ヒット全弾命中で次の自分のターン (= 次のプレイヤーターン) まで「パリィ」を予約。
 //   doAttack 内でパリィ判定し、武器ダメージを完全無効化する。
+//   Limiter / NoiseGate で reds.quadStrike が 0 まで削られると、samuraiQuadStrike は呼ばれず
+//   通常 AI (単発メレー) に落ちる。
 async function samuraiQuadStrike(samurai) {
   samurai.samuraiHitsThisTurn = 0;
-  for (let i = 0; i < 4; i++) {
+  const maxHits = (samurai.reds && samurai.reds.quadStrike != null) ? samurai.reds.quadStrike : 4;
+  if (maxHits <= 0) return;
+  for (let i = 0; i < maxHits; i++) {
     if (samurai.hp <= 0 || gameOver) break;
     const t = pickEnemyTarget(samurai);
     if (t.dist !== 1) break; // 対象が離れた (赤ちゃん死亡等含む)
@@ -6420,10 +6478,10 @@ async function samuraiQuadStrike(samurai) {
     renderEnemyStatus();
     await sleep(180);
   }
-  if (samurai.samuraiHitsThisTurn >= 4 && samurai.hp > 0) {
+  if (samurai.samuraiHitsThisTurn >= maxHits && samurai.hp > 0) {
     samurai.parryActive = true;
     samurai.parryUntilTurn = turn + 1; // 次のプレイヤーターン (turn++ 後の値) と等価
-    log(`⚔ ${enemyDisplayName(samurai)} 四連斬完遂! 次のターンは構え (武器無効)`, "lose");
+    log(`⚔ ${enemyDisplayName(samurai)} ${maxHits}連斬完遂! 次のターンは構え (武器無効)`, "lose");
   }
 }
 
@@ -6431,11 +6489,13 @@ async function enemiesActPaced() {
   for (const e of enemies) {
     if (e.hp <= 0) continue;
     if (gameOver) break;
-    // マスター・サムライ: 隣接時は 4 連斬の async シーケンス
+    // マスター・サムライ: 隣接時は連撃 async シーケンス
+    // (reds.quadStrike が 0 になっていれば連撃せず通常 AI = 単発メレーに落ちる)
     if (e.type === "samurai" &&
         !e.status.some((s) => s.type === "freeze" || s.type === "shock")) {
+      const maxHits = (e.reds && e.reds.quadStrike != null) ? e.reds.quadStrike : 4;
       const t = pickEnemyTarget(e);
-      if (t.dist === 1) {
+      if (maxHits > 0 && t.dist === 1) {
         await samuraiQuadStrike(e);
         renderMap();
         renderHud();
@@ -6443,7 +6503,7 @@ async function enemiesActPaced() {
         await sleep(PACE_MS);
         continue;
       }
-      // 隣接でなければ通常 AI に落ちる
+      // 連撃不可 (reds 0 / 非隣接) なら通常 AI に落ちる
     }
     const result = enemyAct(e);
     if (result === "attacked") {
@@ -6479,6 +6539,19 @@ function pulse(el, className, durationMs) {
   void el.offsetWidth;          // 強制 reflow
   el.classList.add(className);
   setTimeout(() => el.classList.remove(className), durationMs);
+}
+
+// 能力赤字デバフ命中時の浮き文字 (Limiter / NoiseGate)
+function showRedDebuffFx(tileX, tileY) {
+  const t = tileAt(tileX, tileY);
+  if (!t) return;
+  const el = document.createElement("div");
+  el.className = "floating-damage red-debuff";
+  el.textContent = "▾ ABILITY -";
+  el.style.left = `${t.offsetLeft + t.offsetWidth / 2}px`;
+  el.style.top  = `${t.offsetTop + 4}px`;
+  mapEl.appendChild(el);
+  setTimeout(() => el.remove(), 760);
 }
 
 // 不死モード時の "GOD!" 浮き文字
