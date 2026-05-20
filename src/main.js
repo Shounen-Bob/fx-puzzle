@@ -105,6 +105,64 @@
       animation: wraith-float 1.4s ease-in-out infinite, phantom-aura-pulse 1.5s ease-in-out infinite;
     }
 
+    /* ===== マスター・サムライ ===== */
+    @keyframes samurai-stance {
+      0%, 100% { filter: drop-shadow(0 0 3px rgba(220,80,100,0.55)); }
+      50%      { filter: drop-shadow(0 0 8px rgba(255,90,110,0.95)); }
+    }
+    .tile.enemy.enemy-samurai > .char-svg {
+      animation: samurai-stance 1.4s ease-in-out infinite;
+    }
+    /* パリィ中: 金色のオーラ + 刀構えポーズ */
+    @keyframes samurai-parry-aura {
+      0%, 100% { box-shadow: inset 0 0 10px rgba(255,216,102,0.55), 0 0 8px rgba(255,216,102,0.5); }
+      50%      { box-shadow: inset 0 0 18px rgba(255,216,102,0.95), 0 0 20px rgba(255,216,102,1.0); }
+    }
+    .tile.enemy.enemy-samurai.parry-stance {
+      animation: samurai-parry-aura 700ms ease-in-out infinite;
+    }
+    .tile.enemy.enemy-samurai.parry-stance::after {
+      content: "🛡";
+      position: absolute; top: -2px; right: -2px;
+      font-size: 12px; line-height: 1;
+      text-shadow: 0 0 6px #ffd866;
+      pointer-events: none;
+      z-index: 2;
+    }
+    /* パリィ表示 */
+    .floating-damage.parry {
+      color: #ffd866;
+      font-size: 17px;
+      text-shadow: 0 0 8px #ffd866, 0 0 12px #ff8a4d, 0 0 2px #000;
+    }
+
+    /* ===== 土遁エフェクト (人面樹) ===== */
+    @keyframes burrow-fx {
+      0%   { opacity: 0; transform: scale(0.4) translateY(8px); }
+      35%  { opacity: 1; transform: scale(1.2) translateY(0); }
+      100% { opacity: 0; transform: scale(2.2) translateY(-4px); }
+    }
+    .burrow-fx {
+      position: absolute;
+      width: var(--tile-size, 32px);
+      height: var(--tile-size, 32px);
+      background: radial-gradient(circle,
+        rgba(140,180,90,0.85) 0%,
+        rgba(110,80,40,0.6) 45%,
+        rgba(60,40,20,0) 85%);
+      pointer-events: none;
+      z-index: 8;
+      animation: burrow-fx 520ms ease-out forwards;
+    }
+    .burrow-fx::after {
+      content: "🌀";
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      color: #6a4a20;
+      text-shadow: 0 0 4px #aaffaa;
+    }
+
     /* ===== ジャイアントスパイカ ===== */
     @keyframes giant-turtle-glow {
       0%, 100% { filter: drop-shadow(0 0 3px rgba(255,80,60,0.45)); }
@@ -1621,7 +1679,7 @@ const FLOORS = [
         "#....................#",
         "#...........W........#",
         "#..........J.........#",
-        "#.A................I.#",
+        "#.A.......O........I.#",
         "#.......?...?........#",
         "#......Z...B...Z.....#",
         "#.......?...?........#",
@@ -1637,7 +1695,7 @@ const FLOORS = [
         "#..........H.........#",
         "#.......##...........#",
         "#.......##....?......#",
-        "#....I...W.....Q.....#",
+        "#....I...W..O..Q.....#",
         "#.......Z..B....Z....#",
         "#....F.........I.....#",
         "#......?.....W.......#",
@@ -1665,7 +1723,7 @@ const FLOORS = [
         "######################",
         "#.@..................#",
         "#....................#",
-        "#..F....ZQ....ZA.....#",
+        "#..F....ZQ....ZA..O..#",
         "#....................#",
         "#...##.....##........#",
         "#...##..?..##....?...#",
@@ -1684,7 +1742,7 @@ const FLOORS = [
         "#....##############..#",
         "#....#............I..#",
         "#....#..######....F..#",
-        "#....#..#....#.......#",
+        "#....#..#....#....O..#",
         "#....#..#?...#..?....#",
         "#....#..######....Q..#",
         "#....#............F.Z#",
@@ -1714,7 +1772,7 @@ const FLOORS = [
         "#....................#",
         "#......##....##......#",
         "#...?..........?.....#",
-        "#.....Z....B....Z....#",
+        "#.....Z..O.B....Z....#",
         "#......##....##......#",
         "#..........J.........#",
         "#.I......A.........F.#",
@@ -1729,7 +1787,7 @@ const FLOORS = [
         "#....................#",
         "#.F....##....##..X.I.#",
         "#......##....##......#",
-        "#....Z....B....Z.....#",
+        "#....Z..O.B....Z.....#",
         "#......##....##......#",
         "#.I....##....##....Q.#",
         "#.........J..........#",
@@ -2025,6 +2083,9 @@ const ENEMY_ABILITIES = {
   "death-rage":    { name: "死亡時 3T 怒り (ATK×2)", kind: "trait", color: "#ff5544", icon: "👹" },
   "hide-aura-3":   { name: "幻惑オーラ 3×3 (周囲の敵を隠す)", kind: "trait", color: "#bb88ff", icon: "👁" },
   "hide-aura-5":   { name: "幻惑オーラ 5×5 (周囲の敵を隠す)", kind: "trait", color: "#dd66ff", icon: "👁" },
+  "quad-strike":   { name: "四連斬 (隣接で 1 ターンに 4 連撃)", kind: "trait", color: "#ff77aa", icon: "⚔" },
+  "parry-after-quad": { name: "完遂後パリィ (4 連が全弾命中で次ターン武器無効)", kind: "trait", color: "#ffd866", icon: "🛡" },
+  "burrow-emerge-5": { name: "土遁 (5×5 内の対象の隣へ瞬間移動)", kind: "trait", color: "#8aaa66", icon: "🌀" },
 };
 
 // 敵タイプ → 初期 abilities 配列。spawn 時に enemy.abilities にコピーする。
@@ -2039,7 +2100,9 @@ function defaultAbilitiesFor(type, isBoss) {
   } else if (type === "gianturtle") {
     list.push("counter-thorn-storm", "immune-burn", "rooted");
   } else if (type === "tree") {
-    list.push("rooted", "root-bind");
+    list.push("rooted", "root-bind", "burrow-emerge-5");
+  } else if (type === "samurai") {
+    list.push("quad-strike", "parry-after-quad");
   } else if (type === "archer") {
     list.push("ranged-3");
   } else if (type === "crankblitz") {
@@ -2095,7 +2158,7 @@ const ENEMY_TYPE_LABEL = {
   neutral: "無属性", fire: "炎", ice: "氷",
   thorn: "棘", gianturtle: "鋼棘", tree: "樹", archer: "弓", ogre: "鬼",
   wraith: "怨霊", phantomwraith: "幻霊", crankblitz: "鉤機械",
-  knight: "盾騎士",
+  knight: "盾騎士", samurai: "侍",
 };
 const ENEMY_TYPE_COLOR = {
   neutral: "#88aa88", fire: "#ff8a4d", ice: "#88c0e0",
@@ -2104,18 +2167,19 @@ const ENEMY_TYPE_COLOR = {
   ogre: "#cc5544",
   wraith: "#bb88ff", phantomwraith: "#dd66ff",
   crankblitz: "#d4a040",
-  knight: "#c8b070",
+  knight: "#c8b070", samurai: "#dd5566",
 };
 // マップ文字 → 敵タイプ。'B' のみ isBoss も true になる (parseMap で分岐)
 const ENEMY_CHAR_TYPE = {
   E: "neutral", F: "fire", I: "ice", B: "neutral",
   K: "thorn", W: "tree", A: "archer",
-  J: "gianturtle",      // ジャイアントスパイカ (HP85/ATK6、棘嵐 4→8→16→32 / 燃焼無効 / 押し出し無効)
+  J: "gianturtle",      // ジャイアントスパイカ (HP250/ATK6、棘嵐 4→8→16→32 / 燃焼無効 / 押し出し無効)
   H: "crankblitz",      // クランクブリッツ (HP70/ATK5、直線5マスのロケットグラブで引き寄せ)
   Q: "ogre",            // レイジ・オーガ (HP100/ATK10、死亡時 3T 怒り状態)
   R: "wraith",          // レイス (HP80/ATK4、周囲3×3の敵を隠す)
   X: "phantomwraith",   // ファントムレイス (HP100/ATK10、周囲5×5の敵を隠す)
   Z: "knight",          // 盾の騎士 (HP50/ATK2、3×3 内のプレイヤー被ダメを 5 にキャップ)
+  O: "samurai",         // マスター・サムライ (HP100/ATK7、4 連斬 + 完遂後パリィ)
 };
 
 // レイジ・オーガ: フロアに依存しない固定スタッツ。
@@ -2154,7 +2218,7 @@ const CRANK_BLITZ_STATS = {
 // 単発の大火力なら反射 4 で抜けるが、連撃ビルドは自爆級。
 // 燃焼無効・押し出し無効で「チクチク削り」「位置ずらし」をブロック。
 const GIANT_TURTLE_STATS = {
-  hp: 85, atk: 6,
+  hp: 250, atk: 6,
   dropChance: 1.0,
   dropPool: ["subwoofer", "badassdriver", "tubedriver", "stack", "gigadelay"],
 };
@@ -2166,6 +2230,16 @@ const KNIGHT_STATS = {
   hp: 50, atk: 5,
   dropChance: 0.60,
   dropPool: ["preamp", "body", "cabsim", "lift"],
+};
+
+// マスター・サムライ: 接近すると 1 ターンで 4 連斬 (ATK 7)。
+// 4 ヒット全てが命中で完遂すると、次のプレイヤーターンが 1 ターン限りパリィ状態:
+//   武器による攻撃は当たらない (状態異常・押し出し・反射等もキャンセル)。
+// HP は中堅 (100)。範囲攻撃や凍結で四連を止められれば崩せる。
+const SAMURAI_STATS = {
+  hp: 100, atk: 7,
+  dropChance: 0.85,
+  dropPool: ["tubedriver", "badassdriver", "stack", "tripletter", "preamp"],
 };
 
 const ENEMY_ATK = 3;       // 敵の攻撃力
@@ -2649,6 +2723,7 @@ function enemyDisplayName(e) {
   if (e.type === "wraith")        return "レイス";
   if (e.type === "phantomwraith") return "ファントムレイス";
   if (e.type === "knight")        return "盾の騎士";
+  if (e.type === "samurai")       return "マスター・サムライ";
   const label = ENEMY_TYPE_LABEL[e.type] || "無属性";
   return `${label}スライム`;
 }
@@ -2664,6 +2739,7 @@ function enemyTypeIcon(e) {
   if (e.type === "wraith")        return "👻";
   if (e.type === "phantomwraith") return "💀";
   if (e.type === "knight")        return "🛡";
+  if (e.type === "samurai")       return "⚔";
   return e.type === "fire" ? "🔥" : e.type === "ice" ? "❄" : "・";
 }
 
@@ -2678,14 +2754,15 @@ function enemyFlavorText(e) {
     case "fire":    return "常時オーバードライブ気味の熱血漢。身体が燃えてて燃焼が効かない。";
     case "ice":     return "位相が止まってる冷血漢。氷漬けだから凍結はもう効かない。";
     case "thorn":   return "叩かれるたびに棘を返してくる、機嫌の悪い亀。";
-    case "gianturtle": return "鋼鉄の甲羅を持つ亀の上位種。連撃するほど棘が伸びる (4→8→16→32...)。単発の大火力でぶち抜くしかない。燃焼も押し出しも効かない。";
-    case "tree":    return "ステージに根を張った巨木。動かないが、頑固。";
+    case "gianturtle": return "鋼鉄の甲羅を持つ亀の上位種 (HP 250)。連撃するほど棘が伸びる (4→8→16→32...)。単発の大火力でぶち抜くしかない。燃焼も押し出しも効かない。";
+    case "tree":    return "ステージに根を張った巨木。隣接すれば根で動きを縛る (root-bind)。さらに 5×5 圏内に獲物がいれば地中に潜って隣に出現する (土遁)。距離を保つだけでは安全ではない。";
     case "archer":  return "離れて矢を放つ慎重派。近づけば普通の雑魚に成り下がる。";
     case "crankblitz": return "直線5マス以内にいるとロケットグラブで掴んで目の前まで引き寄せる蒸気機械。線を切るか速攻で潰せ。";
     case "ogre":    return "倒しても3ターンは怒り狂って暴れ回る、頑丈な鬼。最後の一発に気をつけろ。";
     case "wraith":  return "周囲3×3の仲間を幻惑のオーラで隠す怨霊。隣の敵が誰なのか、本人を倒すまで見えない。";
     case "phantomwraith": return "5×5の広域に幻惑を撒く上位種。HPも正体も判別不能の包囲網を作るやばい奴。";
     case "knight":  return "誇り高き盾の騎士。自身を中心とする 3×3 内にプレイヤーがいる間、構えた盾で被ダメージを 5 に上限する (盾マークが点る)。範囲外からの遠隔・直線攻撃には無防備。接近戦では連撃や凍結で削るしかない。";
+    case "samurai": return "達人の剣士。隣接すると 1 ターンで 4 連斬 (ATK7) を放ち、4 発全てが命中すると次のターンは構えに入り武器攻撃を全て弾く。連撃ビルドは止められ易い。範囲攻撃や凍結で四連を中断するのが鍵。";
     default:        return "詳細情報なし。倒して調査せよ。";
   }
 }
@@ -2969,6 +3046,7 @@ function parseMap() {
                  : type === "gianturtle"    ? GIANT_TURTLE_STATS
                  : type === "crankblitz"    ? CRANK_BLITZ_STATS
                  : type === "knight"        ? KNIGHT_STATS
+                 : type === "samurai"       ? SAMURAI_STATS
                  : (isBoss ? (cfg.boss || defaultEnemy) : (cfg[type] || defaultEnemy));
         const enemy = {
           x, y, type, isBoss,
@@ -3511,7 +3589,40 @@ function enemySvg(e) {
   if (e.type === "wraith")        return wraithSvg();
   if (e.type === "phantomwraith") return phantomWraithSvg();
   if (e.type === "knight") return knightSvg();
+  if (e.type === "samurai") return samuraiSvg(!!e.parryActive);
   return slimeSvg(e.type, e.isBoss);
+}
+
+// ===== マスター・サムライ SVG =====
+// 着流し + 髷 + 刀。parry 中は刀を真横に構えて防御ポーズ。
+function samuraiSvg(parrying) {
+  return (
+    `<svg class="char-svg" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">` +
+      // 着物の裾 (袴)
+      `<path d="M 7 22 L 9 30 L 23 30 L 25 22 Z" fill="#3a2a3a" stroke="#1a0a1a" stroke-width="0.5"/>` +
+      // 上半身 (着物)
+      `<path d="M 8 14 L 24 14 L 25 22 L 7 22 Z" fill="#5a2a3a" stroke="#1a0a1a" stroke-width="0.5"/>` +
+      // 着物のV襟
+      `<path d="M 14 14 L 16 17 L 18 14 L 16 16 Z" fill="#f0e6d6"/>` +
+      // 帯
+      `<rect x="7" y="20" width="18" height="2" fill="#dcb840" stroke="#1a0a1a" stroke-width="0.4"/>` +
+      // 顔
+      `<circle cx="16" cy="10" r="4.5" fill="#ffd4b0" stroke="#1a0a1a" stroke-width="0.5"/>` +
+      // 目つき (鋭い)
+      `<path d="M 13.5 10 L 14.8 10" stroke="#1a0a1a" stroke-width="0.8" stroke-linecap="round"/>` +
+      `<path d="M 17.2 10 L 18.5 10" stroke="#1a0a1a" stroke-width="0.8" stroke-linecap="round"/>` +
+      // 髷 (頭頂のちょんまげ)
+      `<rect x="14.5" y="4" width="3" height="3" fill="#1a0a14"/>` +
+      // 髪
+      `<path d="M 11.5 8 Q 11 5, 16 5 Q 21 5, 20.5 8 L 19.5 9 Q 18 7, 16 7 Q 14 7, 12.5 9 Z" fill="#1a0a14"/>` +
+      // 刀 (parry 中は横、通常は背中に差した立て構え)
+      (parrying
+        ? `<rect x="2" y="14.4" width="28" height="1.2" fill="#dadfe6" stroke="#1a0a14" stroke-width="0.3"/>` +
+          `<rect x="13" y="13.7" width="6" height="2.6" fill="#7a3a4a" stroke="#1a0a14" stroke-width="0.3"/>`
+        : `<rect x="24.4" y="6" width="1.2" height="20" fill="#dadfe6" stroke="#1a0a14" stroke-width="0.3" transform="rotate(15 25 16)"/>` +
+          `<rect x="23.8" y="22" width="2.4" height="3.5" fill="#7a3a4a" stroke="#1a0a14" stroke-width="0.3" transform="rotate(15 25 23)"/>`) +
+    `</svg>`
+  );
 }
 
 // ===== 赤ちゃん SVG (小さい頭でっかちの幼児) =====
@@ -4093,11 +4204,13 @@ function renderMap() {
     const hidden = isEnemyHiddenByWraith(e);
     const shieldActive = !hidden && e.abilities && e.abilities.includes("damage-taken-cap-5")
                          && Math.abs(e.x - player.x) <= 1 && Math.abs(e.y - player.y) <= 1;
+    const parryActive = !hidden && e.parryUntilTurn != null && turn <= e.parryUntilTurn;
     t.className = "tile enemy enemy-" + (hidden ? "hidden" : e.type)
                   + (hidden ? " hidden-by-wraith" : "")
                   + (!hidden && e.isBoss ? " boss" : "")
                   + (!hidden && e.rage ? " rage" : "")
-                  + (shieldActive ? " shield-active" : "");
+                  + (shieldActive ? " shield-active" : "")
+                  + (parryActive ? " parry-stance" : "");
     t.innerHTML = hidden ? hiddenEnemySvg() : enemySvg(e);
     t._enemy = e;
     if (!hidden) {
@@ -5365,6 +5478,11 @@ async function doAttack(attackKey) {
       ) {
         dmgComputed = 5;
       }
+      // マスター・サムライ: パリィ中は武器ダメージ完全無効 (状態異常も付与しない)
+      if (enemy.parryUntilTurn != null && turn <= enemy.parryUntilTurn) {
+        thisHit.push({ cell, dmg: 0, killed: false, applied: true, mult: 1, parried: true });
+        continue;
+      }
       // 怒り中は無敵: ダメージ 0 として処理 (フロート表示も 0、HP も不変)。
       const dmg = enemy.rage ? 0 : dmgComputed;
       const before = enemy.hp;
@@ -5469,7 +5587,11 @@ async function doAttack(attackKey) {
     flashTiles(targets, flashClass);
     for (const t of thisHit) {
       if (!t.applied) continue;
-      showFloatingDamage(t.cell.x, t.cell.y, t.dmg, floatColor, t.killed, t.mult);
+      if (t.parried) {
+        showParryFx(t.cell.x, t.cell.y);
+      } else {
+        showFloatingDamage(t.cell.x, t.cell.y, t.dmg, floatColor, t.killed, t.mult);
+      }
     }
     renderEnemyStatus();
     renderHud();
@@ -5739,6 +5861,27 @@ function pickEnemyTarget(enemy) {
     : { x: player.x, y: player.y, kind: "player", dist: pdist };
 }
 
+// 土遁の出現先候補: 対象の隣接 8 マスから最初の通行可能セルを返す
+function findBurrowEmergeSpot(targetX, targetY, mover) {
+  const candidates = [
+    [1,0],[-1,0],[0,1],[0,-1],
+    [1,1],[-1,1],[1,-1],[-1,-1],
+  ];
+  for (const [dx, dy] of candidates) {
+    const x = targetX + dx, y = targetY + dy;
+    if (!inBounds(x, y)) continue;
+    if (walls.has(`${x},${y}`)) continue;
+    if (pits.has(`${x},${y}`)) continue;
+    if (goal.x === x && goal.y === y) continue;
+    if (player.x === x && player.y === y) continue;
+    if (baby && baby.hp > 0 && baby.x === x && baby.y === y) continue;
+    if (npcs.some((n) => n.x === x && n.y === y)) continue;
+    if (enemies.some((e) => e !== mover && e.hp > 0 && e.x === x && e.y === y)) continue;
+    return { x, y };
+  }
+  return null;
+}
+
 function enemyAct(enemy) {
   if (enemy.status.some((s) => s.type === "freeze" || s.type === "shock")) {
     return "skipped";
@@ -5766,6 +5909,25 @@ function enemyAct(enemy) {
     else                        enemyAttackPlayer(enemy);
     return "attacked";
   }
+
+  // 人面樹: 土遁 (5×5 = Chebyshev 距離 ≤ 2 に獲物がいれば隣接マスへ瞬間移動)
+  // メレー (Manhattan 1) で殴れる場面は上の if (dist === 1) で既に処理済み。
+  // 残るのは「斜め隣接」「2 マス先」などメレー範囲外の 5×5 圏内。
+  if (enemy.abilities && enemy.abilities.includes("burrow-emerge-5")) {
+    const chebDist = Math.max(Math.abs(dx), Math.abs(dy));
+    if (chebDist <= 2) {
+      const spot = findBurrowEmergeSpot(target.x, target.y, enemy);
+      if (spot) {
+        spawnBurrowFx(enemy.x, enemy.y);
+        enemy.x = spot.x;
+        enemy.y = spot.y;
+        spawnEmergeFx(enemy.x, enemy.y);
+        log(`🌀 ${enemyDisplayName(enemy)} が地中から獲物の隣に出現!`, "attack");
+        return "moved";
+      }
+    }
+  }
+
   if (dist > ENEMY_ALERT_RANGE) return "skipped";
 
   const sx = Math.sign(dx);
@@ -5791,10 +5953,51 @@ function enemyAct(enemy) {
   return "skipped";
 }
 
+// マスター・サムライ: 隣接時に 1 ターンで 4 連斬。
+//   4 ヒット全弾命中で次の自分のターン (= 次のプレイヤーターン) まで「パリィ」を予約。
+//   doAttack 内でパリィ判定し、武器ダメージを完全無効化する。
+async function samuraiQuadStrike(samurai) {
+  samurai.samuraiHitsThisTurn = 0;
+  for (let i = 0; i < 4; i++) {
+    if (samurai.hp <= 0 || gameOver) break;
+    const t = pickEnemyTarget(samurai);
+    if (t.dist !== 1) break; // 対象が離れた (赤ちゃん死亡等含む)
+    if (t.kind === "baby") {
+      if (!baby || baby.hp <= 0) break;
+      enemyAttackBaby(samurai);
+    } else {
+      enemyAttackPlayer(samurai);
+    }
+    samurai.samuraiHitsThisTurn++;
+    renderHud();
+    renderEnemyStatus();
+    await sleep(180);
+  }
+  if (samurai.samuraiHitsThisTurn >= 4 && samurai.hp > 0) {
+    samurai.parryActive = true;
+    samurai.parryUntilTurn = turn + 1; // 次のプレイヤーターン (turn++ 後の値) と等価
+    log(`⚔ ${enemyDisplayName(samurai)} 四連斬完遂! 次のターンは構え (武器無効)`, "lose");
+  }
+}
+
 async function enemiesActPaced() {
   for (const e of enemies) {
     if (e.hp <= 0) continue;
     if (gameOver) break;
+    // マスター・サムライ: 隣接時は 4 連斬の async シーケンス
+    if (e.type === "samurai" &&
+        !e.status.some((s) => s.type === "freeze" || s.type === "shock")) {
+      const t = pickEnemyTarget(e);
+      if (t.dist === 1) {
+        await samuraiQuadStrike(e);
+        renderMap();
+        renderHud();
+        renderEnemyStatus();
+        await sleep(PACE_MS);
+        continue;
+      }
+      // 隣接でなければ通常 AI に落ちる
+    }
     const result = enemyAct(e);
     if (result === "attacked") {
       // ★重要: ここで renderMap() を呼ぶとアニメ用 class (.lunging/.hurt) を
@@ -5830,6 +6033,32 @@ function pulse(el, className, durationMs) {
   el.classList.add(className);
   setTimeout(() => el.classList.remove(className), durationMs);
 }
+
+// パリィ表示 (PARRY! の浮き文字)
+function showParryFx(tileX, tileY) {
+  const t = tileAt(tileX, tileY);
+  if (!t) return;
+  const el = document.createElement("div");
+  el.className = "floating-damage parry";
+  el.textContent = "PARRY!";
+  el.style.left = `${t.offsetLeft + t.offsetWidth / 2}px`;
+  el.style.top  = `${t.offsetTop + 4}px`;
+  mapEl.appendChild(el);
+  setTimeout(() => el.remove(), 760);
+}
+
+// 土遁: 潜入時/出現時 共に同じ渦エフェクトを置く
+function spawnBurrowFx(tileX, tileY) {
+  const t = tileAt(tileX, tileY);
+  if (!t) return;
+  const o = document.createElement("div");
+  o.className = "burrow-fx";
+  o.style.left = `${t.offsetLeft}px`;
+  o.style.top  = `${t.offsetTop}px`;
+  mapEl.appendChild(o);
+  setTimeout(() => o.remove(), 540);
+}
+const spawnEmergeFx = spawnBurrowFx;
 
 // 被弾フラッシュ overlay (mapEl 直下、攻撃ごとに新規 DOM)
 function spawnHurtFx(tileX, tileY) {
