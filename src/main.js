@@ -1028,6 +1028,62 @@
       from { transform: translate(-50%, -45%) scale(0.94); opacity: 0; }
       to   { transform: translate(-50%, -50%) scale(1.0);   opacity: 1; }
     }
+
+    /* ===== システム通知ダイアログ (取得アイテム説明など) ===== */
+    #system-dialog-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(1.5px);
+      z-index: 2999;
+      cursor: pointer;
+      animation: backdrop-fade-in 200ms ease-out;
+    }
+    #system-dialog {
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      min-width: 420px;
+      max-width: 560px;
+      padding: 20px 26px 18px;
+      background: linear-gradient(180deg, #15201a, #0c1410);
+      color: #e6f3da;
+      border: 2px solid #7ed957;
+      border-radius: 12px;
+      font-family: ui-monospace, "Menlo", monospace;
+      font-size: 14px;
+      line-height: 1.65;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.85), 0 0 30px rgba(126,217,87,0.25);
+      z-index: 3000;
+      animation: dialog-pop-in 220ms cubic-bezier(0.2, 1, 0.4, 1);
+    }
+    #system-dialog .sys-title {
+      font-weight: bold;
+      color: #7ed957;
+      font-size: 15px;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #2a3a2a;
+    }
+    #system-dialog .sys-body { color: #e6f3da; }
+    #system-dialog .sys-body b { color: #ffd866; }
+    #system-dialog .sys-close {
+      margin-top: 14px;
+      display: block;
+      width: 100%;
+      padding: 8px;
+      background: rgba(126,217,87,0.15);
+      color: #b8e8a0;
+      border: 1px solid #7ed957;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 13px;
+      cursor: pointer;
+      letter-spacing: 1px;
+    }
+    #system-dialog .sys-close:hover { background: rgba(126,217,87,0.3); color: #fff; }
     #npc-dialog .npc-name {
       font-weight: bold;
       color: #ffd866;
@@ -2630,20 +2686,30 @@ function showNpcTooltip(n, anchorEl) {
 
 // 赤ちゃんホバー時の説明
 function showBabyTooltip(b, anchorEl) {
+  if (babyWithMother) {
+    enemyTooltip.innerHTML =
+      `<div class="et-title" style="color:#ff88bb">👶 赤ちゃん</div>` +
+      `<div style="margin-top:4px;color:#d4d4d4;font-style:italic;font-size:11px;line-height:1.5">${escapeHtml("母と再会した小さな命。もう怖いものは何もない。")}</div>` +
+      `<div style="color:#ff88bb;margin-top:4px">💖 母に抱かれて安心しきっている (聖域)</div>`;
+    enemyTooltip.style.display = "block";
+    positionEnemyTooltipNear(anchorEl);
+    return;
+  }
   const blessing = hasBlessing()
     ? '<div style="color:#ffd866;margin-top:4px">✟ 騎士の最期の加護: 敵物理ダメ → 1</div>'
     : "";
-  const state = babyWithMother
-    ? '<div style="color:#ff88bb;margin-top:4px">💖 母に抱かれて安心しきっている (聖域)</div>'
-    : `<div style="margin-top:4px;color:#cfcfcf">HP ${b.hp}/${b.hpMax} (UI 非表示、台詞で察してね)</div>`;
-  const flavor = babyWithMother
-    ? "母と再会した小さな命。もう怖いものは何もない。"
-    : "騎士から託された小さな命。状態は喋ってくれる: きゃっきゃっ=元気、ばぶばぶ/たいたい=元気、ぜぇ=半分以下、ひゅー=瀕死。HP 0 で失う。";
+  const flavor = "騎士から託された小さな命。プレイヤーの後ろを付いてきて、敵に殴られると HP を失う。";
   enemyTooltip.innerHTML =
     `<div class="et-title" style="color:#ff88bb">👶 赤ちゃん</div>` +
     `<div style="margin-top:4px;color:#d4d4d4;font-style:italic;font-size:11px;line-height:1.5">${escapeHtml(flavor)}</div>` +
-    state +
-    blessing;
+    blessing +
+    `<div style="border-top:1px solid #3a3a44;margin:8px 0"></div>` +
+    `<div style="color:#7ed957;font-size:11px;line-height:1.5">` +
+      `🎛 <b>BABY ボード</b> にペダルを装着できる (空き 2 枠):<br>` +
+      `&nbsp;・<b style="color:#88dd66">Body / Cab Sim / Subwoofer</b> → 最大HP を底上げ<br>` +
+      `&nbsp;・<b style="color:#66ddaa">Power Supply</b> → 1 歩ごとに HP 回復<br>` +
+      `<span style="color:#888;font-size:10px">取り外しはピット (P) でのみ</span>` +
+    `</div>`;
   enemyTooltip.style.display = "block";
   positionEnemyTooltipNear(anchorEl);
 }
@@ -3527,6 +3593,24 @@ function startNpcDialog(npc) {
       babySaySpeech();
       recomputeBabyHpMax();
       renderAll();
+      // 取得イベントの通知ダイアログ (会話とは別ウィンドウ風)
+      showSystemDialog(
+        "👶 赤ちゃんを託された",
+        `<p>瀕死の騎士から、小さな赤ちゃんを託された。</p>` +
+        `<p>胸には <b style="color:#ffd866">✟ 騎士の最期の加護</b> が刻まれている。<br>` +
+        `<span style="color:#b8e8a0">→ 敵の物理攻撃で受けるダメージが <b>必ず 1</b> に変換される。</span></p>` +
+        `<div style="margin-top:10px;padding:10px 12px;background:rgba(126,217,87,0.08);border-left:3px solid #7ed957;border-radius:4px">` +
+          `<b style="color:#7ed957">🎛 BABY ボードが追加された</b><br>` +
+          `<span style="font-size:12px;line-height:1.55">` +
+            `画面下のペダルボードに <b>[BABY]</b> 行が増えている。<br>` +
+            `空き 2 枠に次のペダルをドラッグ&ドロップで装着可:<br>` +
+            `&nbsp;・<b style="color:#88dd66">Body / Cab Sim / Subwoofer</b> → 赤ちゃんの<b>最大HP</b>を底上げ<br>` +
+            `&nbsp;・<b style="color:#66ddaa">Power Supply</b> → 1 歩ごとに赤ちゃんの<b>HP回復</b><br>` +
+            `<span style="color:#aaa;font-size:11px">取り外しはピット (P) でのみ</span>` +
+          `</span>` +
+        `</div>` +
+        `<p style="margin-top:10px;color:#cfcfcf;font-size:12px">10F でその子の母を探し当てれば、奥への扉が開く。</p>`
+      );
     };
   } else if (npc.type === "mother") {
     lines = [
@@ -3555,6 +3639,31 @@ function startNpcDialog(npc) {
   }
   activeDialog = { npcType: npc.type, lines, idx: 0, onComplete };
   renderNpcDialog();
+}
+
+// 取得イベントなどを伝えるシステム通知ダイアログ (中央 + 暗転 + 緑枠)。
+// NPC ダイアログとは別の見た目で、確認ボタン or バックドロップクリックで閉じる。
+function showSystemDialog(titleHtml, bodyHtml) {
+  // 既存があれば閉じる
+  document.getElementById("system-dialog")?.remove();
+  document.getElementById("system-dialog-backdrop")?.remove();
+  const close = () => {
+    document.getElementById("system-dialog")?.remove();
+    document.getElementById("system-dialog-backdrop")?.remove();
+  };
+  const backdrop = document.createElement("div");
+  backdrop.id = "system-dialog-backdrop";
+  backdrop.addEventListener("click", close);
+  document.body.appendChild(backdrop);
+  const el = document.createElement("div");
+  el.id = "system-dialog";
+  el.innerHTML =
+    `<div class="sys-title">${titleHtml}</div>` +
+    `<div class="sys-body">${bodyHtml}</div>` +
+    `<button type="button" class="sys-close">OK (Space / クリックで閉じる)</button>`;
+  el.addEventListener("click", (e) => e.stopPropagation());
+  el.querySelector(".sys-close").addEventListener("click", close);
+  document.body.appendChild(el);
 }
 
 function advanceNpcDialog() {
@@ -4071,8 +4180,11 @@ function placePedalAtBabySlot(slotIdx, uid) {
   const item = findInInventory(uid);
   if (!item || item.kind !== "pedal") return false;
   const p = PEDALS[item.id];
-  if (!p || p.kind !== "passive" || p.hook !== "maxHpBoost") {
-    log("👶 赤ちゃんには HP/防御系 (Body 等) しか装着できない", "lose");
+  // 赤ちゃん枠は passive で hook が maxHpBoost / onStep のものを受理
+  // (HP 増強系 + Power Supply 系の回復)
+  const okHook = p && p.kind === "passive" && (p.hook === "maxHpBoost" || p.hook === "onStep");
+  if (!okHook) {
+    log("👶 赤ちゃんには HP/防御 (Body 等) か回復 (Power Supply) のペダルしか装着できない", "lose");
     return false;
   }
   removeFromInventoryByUid(uid);
@@ -4904,6 +5016,23 @@ function applyOnStepPassives() {
       if (actual > 0) log(`⚡ ${p.name}: +${actual} HP`, "win");
     }
   }
+  // 赤ちゃんボードの onStep 系 (Power Supply 等) は赤ちゃん側に効く
+  if (baby && baby.hp > 0 && !babyWithMother) {
+    const bseen = new Set();
+    for (const it of baby.board) {
+      if (!it) continue;
+      const id = it.id;
+      if (bseen.has(id)) continue;
+      const p = PEDALS[id];
+      if (!p || p.kind !== "passive" || p.hook !== "onStep") continue;
+      bseen.add(id);
+      const heal = Math.max(1, Math.ceil(baby.hp * (p.ratio || 0)));
+      const before = baby.hp;
+      baby.hp = Math.min(baby.hpMax, baby.hp + heal);
+      const actual = baby.hp - before;
+      if (actual > 0) log(`👶⚡ ${p.name}: 赤ちゃん +${actual} HP`, "win");
+    }
+  }
 }
 
 // ========================================================================
@@ -5692,6 +5821,16 @@ function rotateFacing(dx, dy) {
 
 document.addEventListener("keydown", (e) => {
   if (gameOver) return;
+  // システム通知ダイアログ中: Space / Enter で閉じる。他キーは無効。
+  const sysDialog = document.getElementById("system-dialog");
+  if (sysDialog) {
+    if (e.key === " " || e.key === "Enter" || e.key === "Escape") {
+      sysDialog.remove();
+      document.getElementById("system-dialog-backdrop")?.remove();
+      e.preventDefault();
+    }
+    return;
+  }
   // NPC ダイアログ中: Space / Enter / クリック相当キーで台詞送り。他キーは無効。
   if (activeDialog) {
     if (e.key === " " || e.key === "Enter") {
