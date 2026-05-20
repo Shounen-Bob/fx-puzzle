@@ -2199,8 +2199,8 @@ const ENEMY_ABILITIES = {
   "death-rage":    { name: "死亡時 {rage}T 怒り (ATK×2)", kind: "trait", color: "#ff5544", icon: "👹" },
   "hide-aura-3":   { name: "幻惑オーラ 3×3 (周囲の敵を隠す)", kind: "trait", color: "#bb88ff", icon: "👁" },
   "hide-aura-5":   { name: "幻惑オーラ 5×5 (周囲の敵を隠す)", kind: "trait", color: "#dd66ff", icon: "👁" },
-  "quad-strike":   { name: "{quadStrike}連斬 (隣接で 1 ターンに {quadStrike} 連撃)", kind: "trait", color: "#ff77aa", icon: "⚔" },
-  "parry-after-quad": { name: "完遂後パリィ (連撃全弾命中で次ターン武器無効)", kind: "trait", color: "#ffd866", icon: "🛡" },
+  "quad-strike":   { name: "{quadStrike}回攻撃", kind: "trait", color: "#ff77aa", icon: "⚔" },
+  "parry-after-quad": { name: "{quadStrike}回攻撃に成功すると、次のマスターサムライのターンまでパリィ状態になる", kind: "trait", color: "#ffd866", icon: "🛡" },
   "burrow-emerge-5": { name: "土遁 (5×5 内の対象の隣へ瞬間移動)", kind: "trait", color: "#8aaa66", icon: "🌀" },
 };
 
@@ -6632,7 +6632,7 @@ function showShimmerFx(tileX, tileY) {
   // 浮き文字
   const el = document.createElement("div");
   el.className = "floating-damage shimmer-parry";
-  el.textContent = "SHIMMER!";
+  el.textContent = "PARRY!";
   el.style.left = `${t.offsetLeft + t.offsetWidth / 2}px`;
   el.style.top  = `${t.offsetTop + 4}px`;
   mapEl.appendChild(el);
