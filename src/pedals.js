@@ -174,6 +174,21 @@ const PEDALS = {
     hook: "maxHpBoost", noRed: true,
   },
 
+  // ===== Passive: LineSelector (武器スロット追加) =====
+  // 装着するごとに R / T / Y の順で新しい武器スロットを 1 つ解放 (最大 3 個)。
+  // 赤字無し (固定機能)、modifier の影響無し。
+  // ★ ペダルを外すと、その追加スロットに装備していた武器と、そのスロット内のペダル
+  //   全てが「消失」する (インベントリには戻らない)。removePedalFromSlot 側で
+  //   確認ダイアログを出してから喪失処理を実行する。
+  // 出現絞り: rarity 5 (PowerStack 等と同じレア枠)
+  lineselector: {
+    id: "lineselector", kind: "passive",
+    red: 0, color: "#bb88ff", icon: "⫶",
+    hook: "lineselector",
+    noRed: true,
+    rarity: 5,
+  },
+
   // ===== Passive: Shimmer (確率パリィ) =====
   // 敵の攻撃を受ける度、5% × red の確率で攻撃を完全に弾く。
   // boostable:true なので Booster / Stack 等で赤字を増やすと確率上昇。

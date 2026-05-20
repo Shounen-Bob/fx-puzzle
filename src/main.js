@@ -2111,8 +2111,10 @@ const player = {
 // 同じペダル ID を複数枠/別ボードに装着している場合は加算 (各 instance ぶんカウント)。
 function recomputePlayerHpMax() {
   let bonus = 0;
-  for (const key of ["q", "w", "e"]) {
-    for (const it of board[key]) {
+  for (const key of activeBoardKeys()) {
+    const b = board[key];
+    if (!b) continue;
+    for (const it of b) {
       if (!it) continue;
       const p = PEDALS[it.id];
       if (!p || p.kind !== "passive" || p.hook !== "maxHpBoost") continue;
@@ -2362,11 +2364,50 @@ const board = {
 };
 // ボード上のペダル ID 配列を取り出す (resolveChain 用)
 function getSlotPedalIds(boardKey) {
-  return board[boardKey].map((it) => (it ? it.id : null));
+  const b = board[boardKey];
+  if (!b) return new Array(BOARD_SIZE).fill(null);
+  return b.map((it) => (it ? it.id : null));
 }
 let activeBoard = "q";
-let pendingAttack = null; // null | "q" | "w" | "e" — 構え中の攻撃キー
-const ATTACK_COLORS = { q: "#ffd866", w: "#88ddff", e: "#7ed957", b: "#ff88bb" };
+let pendingAttack = null; // null | "q" | "w" | "e" | "r" | "t" | "y" — 構え中の攻撃キー
+const ATTACK_COLORS = {
+  q: "#ffd866", w: "#88ddff", e: "#7ed957", b: "#ff88bb",
+  // LineSelector で開く追加スロット
+  r: "#bb88ff", t: "#cc66cc", y: "#dd55aa",
+};
+
+// LineSelector で追加開放できるスロットの順序。
+const LINE_SELECTOR_SLOTS = ["r", "t", "y"];
+const MAIN_BOARD_KEYS = ["q", "w", "e"];
+
+// 現在装着中の LineSelector を { 'r': item, 't': item, ... } 形式で返す。
+// LineSelector 自体は Q/W/E/R/T/Y どのボードにも置ける (BABY は不可)。
+function lineSelectorOwners() {
+  const map = {};
+  for (const key of MAIN_BOARD_KEYS.concat(LINE_SELECTOR_SLOTS)) {
+    const b = board[key];
+    if (!b) continue;
+    for (const it of b) {
+      if (it && it.id === "lineselector" && it.lineSlot) {
+        map[it.lineSlot] = it;
+      }
+    }
+  }
+  return map;
+}
+
+// 現在開いている追加スロット (Q/W/E は常時、R/T/Y は LineSelector があるもののみ) を返す。
+function activeBoardKeys() {
+  const owners = lineSelectorOwners();
+  return MAIN_BOARD_KEYS.concat(LINE_SELECTOR_SLOTS.filter((k) => !!owners[k]));
+}
+
+// 次に開ける LineSelector スロット (r → t → y の順)。全部埋まっていれば null。
+function findFreeLineSlot() {
+  const owners = lineSelectorOwners();
+  for (const k of LINE_SELECTOR_SLOTS) if (!owners[k]) return k;
+  return null;
+}
 
 // ピット（編集可能エリア）とゴール
 const pits = new Set();   // "x,y" 形式
@@ -2400,7 +2441,7 @@ const BABY_BOARD_SIZE = 3;
 //                    Q/W/E のいずれかに tripletecho ペダルが乗っているときだけ加算。
 const weaponState = {
   sustainer: { lastEnemy: null, streak: 0 },
-  tripletecho: { q: 0, w: 0, e: 0 },
+  tripletecho: { q: 0, w: 0, e: 0, r: 0, t: 0, y: 0 },
 };
 
 // 床落ちアイテム: "x,y" -> { kind: "pedal"|"weapon", id }
@@ -3173,9 +3214,11 @@ function showItemMenu(item, anchorEl) {
   };
 
   if (item.kind === "weapon") {
-    addOpt(`⚔ Q スロットに装備${weapons.q ? ` (現: ${WEAPONS[weapons.q].name})` : ""}`, () => equipWeaponTo(item.uid, "q"));
-    addOpt(`⚔ W スロットに装備${weapons.w ? ` (現: ${WEAPONS[weapons.w].name})` : ""}`, () => equipWeaponTo(item.uid, "w"));
-    addOpt(`⚔ E スロットに装備${weapons.e ? ` (現: ${WEAPONS[weapons.e].name})` : ""}`, () => equipWeaponTo(item.uid, "e"));
+    for (const slotKey of activeBoardKeys()) {
+      const cur = weapons[slotKey];
+      const suffix = cur ? ` (現: ${WEAPONS[cur].name})` : "";
+      addOpt(`⚔ ${slotKey.toUpperCase()} スロットに装備${suffix}`, () => equipWeaponTo(item.uid, slotKey));
+    }
   } else {
     // ペダル: 装着はドラッグ&ドロップ専用 (クリック装着は廃止)
     const hint = document.createElement("div");
@@ -4142,6 +4185,46 @@ function fireLineOnShow() {
   }
 }
 
+// 確認ダイアログ (LineSelector 取り外しなど、不可逆操作で使う)。
+// onConfirm が呼ばれるのはユーザーが confirm ボタンを押した時のみ。
+// バックドロップ・キャンセルボタン・Esc は全てキャンセル扱い。
+function showConfirmDialog({ title, bodyHtml, confirmLabel="OK", cancelLabel="キャンセル", danger=false, onConfirm }) {
+  document.getElementById("system-dialog")?.remove();
+  document.getElementById("system-dialog-backdrop")?.remove();
+  const close = () => {
+    document.getElementById("system-dialog")?.remove();
+    document.getElementById("system-dialog-backdrop")?.remove();
+  };
+  const backdrop = document.createElement("div");
+  backdrop.id = "system-dialog-backdrop";
+  backdrop.addEventListener("click", close);
+  document.body.appendChild(backdrop);
+  const el = document.createElement("div");
+  el.id = "system-dialog";
+  if (danger) {
+    el.style.borderColor = "#ff5544";
+    el.style.boxShadow = "0 12px 40px rgba(0,0,0,0.85), 0 0 30px rgba(255,85,68,0.3)";
+  }
+  const titleColor = danger ? "#ff5544" : "#7ed957";
+  const confirmBg = danger ? "rgba(255,85,68,0.18)"  : "rgba(126,217,87,0.18)";
+  const confirmBd = danger ? "#ff5544" : "#7ed957";
+  const confirmCol= danger ? "#ffaa99" : "#b8e8a0";
+  el.innerHTML =
+    `<div class="sys-title" style="color:${titleColor};border-bottom-color:#3a2a2a">${title}</div>` +
+    `<div class="sys-body">${bodyHtml}</div>` +
+    `<div style="display:flex;gap:8px;margin-top:14px">` +
+      `<button type="button" class="sys-confirm" style="flex:1;padding:8px;background:${confirmBg};color:${confirmCol};border:1px solid ${confirmBd};border-radius:6px;font-family:inherit;font-size:13px;cursor:pointer;letter-spacing:1px">${confirmLabel}</button>` +
+      `<button type="button" class="sys-cancel" style="flex:1;padding:8px;background:rgba(150,150,150,0.1);color:#bbb;border:1px solid #555;border-radius:6px;font-family:inherit;font-size:13px;cursor:pointer">${cancelLabel}</button>` +
+    `</div>`;
+  el.addEventListener("click", (e) => e.stopPropagation());
+  el.querySelector(".sys-confirm").addEventListener("click", () => {
+    close();
+    if (typeof onConfirm === "function") onConfirm();
+  });
+  el.querySelector(".sys-cancel").addEventListener("click", close);
+  document.body.appendChild(el);
+}
+
 // 取得イベントなどを伝えるシステム通知ダイアログ (中央 + 暗転 + 緑枠)。
 // NPC ダイアログとは別の見た目で、確認ボタン or バックドロップクリックで閉じる。
 function showSystemDialog(titleHtml, bodyHtml) {
@@ -4740,7 +4823,7 @@ function removePedalFromBabySlot(slotIdx) {
 
 function renderBoard() {
   boardEl.innerHTML = "";
-  for (const key of ["q", "w", "e"]) {
+  for (const key of activeBoardKeys()) {
     const weaponId = weapons[key];
     const src = weaponId ? WEAPONS[weaponId] : null;
     // チェーン中間表現を計算 (Booster で各ペダルの赤字がどう変わるか)
@@ -4951,7 +5034,7 @@ function renderInventory() {
 
 function renderChainSummary() {
   const lines = [];
-  for (const key of ["q", "w", "e"]) {
+  for (const key of activeBoardKeys()) {
     const weaponId = weapons[key];
     if (!weaponId) {
       lines.push(
@@ -5229,9 +5312,22 @@ function placePedalAtSlot(boardKey, slotIdx, uid) {
   const item = findInInventory(uid);
   if (!item || item.kind !== "pedal") return false;
   if (slotIdx < 0 || slotIdx >= BOARD_SIZE) return false;
+  if (!board[boardKey]) return false; // 未開放ボードへの装着は不可
   if (board[boardKey][slotIdx] != null) {
     log("そのスロットは埋まってる (外しはピットで)");
     return false;
+  }
+  // LineSelector: 次の追加スロット (R/T/Y) を確保
+  if (item.id === "lineselector") {
+    const lineSlot = findFreeLineSlot();
+    if (!lineSlot) {
+      log("⚠ LineSelector は最大 3 つまで (R/T/Y 全て解放済)", "lose");
+      return false;
+    }
+    item.lineSlot = lineSlot;
+    if (!board[lineSlot]) board[lineSlot] = new Array(BOARD_SIZE).fill(null);
+    if (weapons[lineSlot] === undefined) weapons[lineSlot] = null;
+    log(`⫶ LineSelector → 新スロット [${lineSlot.toUpperCase()}] が解放された!`, "win");
   }
   removeFromInventoryByUid(uid);
   board[boardKey][slotIdx] = item;
@@ -5248,7 +5344,12 @@ function placePedalAtSlot(boardKey, slotIdx, uid) {
 function autoEquipPedalTo(uid, boardKey) {
   const item = findInInventory(uid);
   if (!item || item.kind !== "pedal") return;
-  const idx = board[boardKey].indexOf(null);
+  const b = board[boardKey];
+  if (!b) {
+    log(`[${boardKey.toUpperCase()}] ボードは未開放`, "lose");
+    return;
+  }
+  const idx = b.indexOf(null);
   if (idx < 0) {
     log(`[${boardKey.toUpperCase()}] ボードに空きが無い`, "lose");
     return;
@@ -5263,15 +5364,87 @@ function removePedalFromSlot(boardKey, idx) {
     return;
   }
   if (idx < 0 || idx >= BOARD_SIZE) return;
+  if (!board[boardKey]) return;
   const item = board[boardKey][idx];
   if (!item) return;
   if (inventory.length >= INV_MAX) {
     log(`インベントリ満杯 (${INV_MAX})、外せない`, "lose");
     return;
   }
+
+  // LineSelector を外す: 対応スロット (R/T/Y) の武器とペダルが全て消失する。
+  // ★ 喪失警告を必ず表示し、明示的に「外す」を選んだ場合だけ実行する。
+  if (item.id === "lineselector" && item.lineSlot) {
+    const ls = item.lineSlot;
+    const wid = weapons[ls];
+    const wName = wid ? WEAPONS[wid].name : "(無し)";
+    // 消失対象から「外そうとしている LineSelector 自身」は除外する
+    // (こいつはインベントリに戻すため)
+    const pedals = (board[ls] || []).filter((p) => p && p !== item);
+    const pedalNames = pedals.length
+      ? pedals.map((p) => PEDALS[p.id].name).join(", ")
+      : "(無し)";
+    const hasLoss = !!wid || pedals.length > 0;
+    showConfirmDialog({
+      title: `⚠ LineSelector を外しますか?`,
+      bodyHtml:
+        `<p>このペダルを外すと、対応する <b style="color:#ff9966">[${ls.toUpperCase()}] スロット</b> の` +
+        ` <b>武器</b> と <b>そのボードに装着していた全ペダル</b> が <b style="color:#ff5544">完全に消失</b> します。<br>` +
+        `<span style="color:#aaa;font-size:12px">(インベントリには戻りません)</span></p>` +
+        `<div style="margin-top:10px;padding:10px 12px;background:rgba(255,85,68,0.08);border-left:3px solid #ff5544;border-radius:4px">` +
+          `<div style="color:#ff9988"><b>消失するもの:</b></div>` +
+          `<div>・武器: <b style="color:#${hasLoss && wid ? "ffd866" : "888"}">${wName}</b></div>` +
+          `<div>・ペダル: <b style="color:#${pedals.length ? "c8aaff" : "888"}">${pedalNames}</b></div>` +
+        `</div>` +
+        `<p style="margin-top:10px;font-size:12px;color:#cfcfcf">` +
+          `先にそのスロットから武器/ペダルを取り出してから外せば、何も失わずに済みます。` +
+        `</p>`,
+      confirmLabel: hasLoss ? "💥 失っても外す" : "外す",
+      cancelLabel: "キャンセル",
+      danger: hasLoss,
+      onConfirm: () => doRemoveLineSelector(boardKey, idx, item),
+    });
+    return;
+  }
+
   board[boardKey][idx] = null;
   inventory.push(item);
   log(`${PEDALS[item.id].name} を [${boardKey.toUpperCase()}] スロット${idx + 1} から外した`);
+  recomputePlayerHpMax();
+  renderAll();
+}
+
+// LineSelector 取り外し本体: 対応スロットの全てを消失させ、ペダル本体は
+// インベントリに戻す (lineSlot プロパティはクリア)。
+// 「LineSelector が ls 自身のボードに置かれていた」ケースも安全に処理する。
+function doRemoveLineSelector(boardKey, idx, item) {
+  const ls = item.lineSlot;
+  if (!ls) return;
+  // 喪失ログ (LineSelector 自身は除外)
+  if (weapons[ls]) {
+    log(`💥 [${ls.toUpperCase()}] の武器 ${WEAPONS[weapons[ls]].name} が消失`, "lose");
+  }
+  if (board[ls]) {
+    for (const p of board[ls]) {
+      if (!p || p === item) continue;
+      log(`💥 [${ls.toUpperCase()}] の ${PEDALS[p.id].name} が消失`, "lose");
+    }
+  }
+  // 別ボード (boardKey !== ls) に LineSelector があった場合のみ、その枠を空ける。
+  // boardKey === ls の場合は次の delete board[ls] で消えるので何もしなくて良い。
+  if (boardKey !== ls && board[boardKey]) {
+    board[boardKey][idx] = null;
+  }
+  // 追加スロットを丸ごと撤去
+  weapons[ls] = null;
+  delete board[ls];
+  // LineSelector 自身はインベントリに戻す (lineSlot プロパティをクリア)
+  delete item.lineSlot;
+  inventory.push(item);
+  // 構え/active board がそのスロットだった場合は q に逃がす
+  if (pendingAttack === ls) pendingAttack = null;
+  if (activeBoard === ls)  activeBoard = "q";
+  log(`⫶ LineSelector を取り外した (スロット [${ls.toUpperCase()}] を撤去)`);
   recomputePlayerHpMax();
   renderAll();
 }
@@ -5518,10 +5691,10 @@ function applyOnHitPassives(boardKey) {
 }
 
 // ---- Passive: 1歩移動ごと (powersupply 等) ----
-// 全ボード (Q/W/E) を横断、同じ id は 1 回だけ発火 (重ね掛けなし)。
+// 全ボード (Q/W/E + R/T/Y) を横断、同じ id は 1 回だけ発火 (重ね掛けなし)。
 function applyOnStepPassives() {
   const seen = new Set();
-  for (const key of ["q", "w", "e"]) {
+  for (const key of activeBoardKeys()) {
     const slots = getSlotPedalIds(key);
     for (const id of slots) {
       if (!id || seen.has(id)) continue;
@@ -6351,7 +6524,7 @@ function showShimmerFx(tileX, tileY) {
 function computeShimmerRedTotal() {
   let total = 0;
   const FAKE_SRC = { damage: 0 };
-  for (const key of ["q", "w", "e"]) {
+  for (const key of activeBoardKeys()) {
     const slots = getSlotPedalIds(key);
     const weaponId = weapons[key];
     const src = (weaponId && WEAPONS[weaponId]) ? WEAPONS[weaponId] : FAKE_SRC;
@@ -6602,6 +6775,9 @@ document.addEventListener("keydown", (e) => {
     case "q": case "Q": performAttackKey("q"); e.preventDefault(); break;
     case "w": case "W": performAttackKey("w"); e.preventDefault(); break;
     case "e": case "E": performAttackKey("e"); e.preventDefault(); break;
+    case "r": case "R": if (board.r) performAttackKey("r"); e.preventDefault(); break;
+    case "t": case "T": if (board.t) performAttackKey("t"); e.preventDefault(); break;
+    case "y": case "Y": if (board.y) performAttackKey("y"); e.preventDefault(); break;
     case "Escape":
       if (pendingAttack) { pendingAttack = null; renderAll(); }
       break;
