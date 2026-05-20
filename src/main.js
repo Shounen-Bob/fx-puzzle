@@ -6215,6 +6215,8 @@ function isCellBlockedForEnemy(self, x, y) {
   return false;
 }
 
+// 戻り値: 攻撃が実際に着弾したか (Shimmer/GOD で弾かれた場合は false)。
+//   サムライの 4 連斬パリィ条件などで「成功した攻撃のみ」をカウントするために使用。
 function enemyAttackPlayer(enemy) {
   let dmg = enemy.atk != null ? enemy.atk : ENEMY_ATK;
   // 怒り状態中は ATK ×2 (death-rage の効果)
@@ -6228,12 +6230,12 @@ function enemyAttackPlayer(enemy) {
   if (playerInvincible) {
     showGodFx(player.x, player.y);
     log(`🛡 GOD: 敵の攻撃 (-${dmg} → 0)`, "info");
-    return;
+    return false;
   }
   if (rollShimmerParry()) {
     showShimmerFx(player.x, player.y);
     log(`✦ Shimmer: ${enemyDisplayName(enemy)} の攻撃を弾いた! (-${dmg} → 0)`, "win");
-    return;
+    return false;
   }
 
   player.hp -= dmg;
@@ -6254,11 +6256,13 @@ function enemyAttackPlayer(enemy) {
   } else {
     log(`敵に殴られた！ -${dmg}`, "attack");
   }
+  return true;
 }
 
 // 敵が赤ちゃんを攻撃。加護があれば最終ダメ=1 にクランプ。
+// 戻り値: 着弾したか (加護で 1 まで減ろうが着弾は着弾なので true)。
 function enemyAttackBaby(enemy) {
-  if (!baby || baby.hp <= 0) return;
+  if (!baby || baby.hp <= 0) return false;
   let dmg = enemy.atk != null ? enemy.atk : ENEMY_ATK;
   if (enemy.rage) dmg *= 2;
   // 加護: 物理ダメは 1 に上限
@@ -6270,6 +6274,7 @@ function enemyAttackBaby(enemy) {
   // damageBaby で floating + hurt fx + 死亡時バブル + バブル制御まで処理
   damageBaby(dmg, "physical");
   if (baby) log(`👶 赤ちゃんが殴られた！ -${dmg}`, "attack");
+  return true;
 }
 
 // アーチャー: 4 方向直線・3 マスまで・壁/他敵で止まる
@@ -6521,17 +6526,21 @@ async function samuraiQuadStrike(samurai) {
     if (samurai.hp <= 0 || gameOver) break;
     const t = pickEnemyTarget(samurai);
     if (t.dist !== 1) break; // 対象が離れた (赤ちゃん死亡等含む)
+    // 着弾したかどうかで成功カウントを取る (Shimmer/GOD でパリィされた分は除外)
+    let landed = false;
     if (t.kind === "baby") {
       if (!baby || baby.hp <= 0) break;
-      enemyAttackBaby(samurai);
+      landed = enemyAttackBaby(samurai);
     } else {
-      enemyAttackPlayer(samurai);
+      landed = enemyAttackPlayer(samurai);
     }
-    samurai.samuraiHitsThisTurn++;
+    if (landed) samurai.samuraiHitsThisTurn++;
     renderHud();
     renderEnemyStatus();
     await sleep(180);
   }
+  // SAMURAI_PARRY_THRESHOLD (=4) 回「着弾」した時のみパリィ発動。
+  // Shimmer や GOD で 1 発でも弾かれていればこの条件は満たせず、パリィしない。
   if (samurai.samuraiHitsThisTurn >= SAMURAI_PARRY_THRESHOLD && samurai.hp > 0) {
     samurai.parryActive = true;
     samurai.parryUntilTurn = turn + 1; // 次のプレイヤーターン (turn++ 後の値) と等価
