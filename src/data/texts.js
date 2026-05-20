@@ -75,9 +75,9 @@ const TEXTS = {
       detail: "左隣の赤字を赤字倍する。",
     },
     stack: {
-      name: "Stack",
+      name: "PowerStack",
       desc: "左隣の赤字を ×{red}",
-      detail: "左隣の赤字を赤字倍する。",
+      detail: "左隣の赤字を赤字倍する。倍化系の最大値、レア出現。",
     },
 
     lift: {

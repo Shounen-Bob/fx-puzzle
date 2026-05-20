@@ -43,6 +43,7 @@ const PEDALS = {
   badassdriver: {
     id: "badassdriver", kind: "value",
     red: 4, color: "#ff4444", icon: "⬢",
+    rarity: 5,
     apply(atk, red) { if (red > 0) atk.damage = atk.damage * red; },
   },
 
@@ -78,6 +79,7 @@ const PEDALS = {
   gigadelay: {
     id: "gigadelay", kind: "copy",
     red: 2, color: "#aa44ff", icon: "◎",
+    rarity: 5,
   },
 
   // ===== Modifier: 乗算 =====
@@ -95,6 +97,7 @@ const PEDALS = {
     id: "stack", kind: "modifier",
     red: 4, color: "#ff5522", icon: "✱",
     op: "mult",
+    rarity: 5,
   },
 
   // ===== Modifier: 加算 =====

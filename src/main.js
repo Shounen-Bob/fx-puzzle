@@ -2060,12 +2060,33 @@ const WEAPON_MAP = {
 // グローバル・ドロップ・プール: 全武器 + 全ペダル。
 // ?スポット / 敵ドロップともにここから乱択 (フロアごとの pickupPool / dropPool は使用しない)
 // kind:"baby-locked" のペダル (騎士の最期の加護) はドロップ対象から除外する。
-const GLOBAL_DROP_POOL = Object.keys(WEAPONS).map((id) => ({ kind: "weapon", id }))
+// 各エントリは { kind, id, weight }。weight が大きいほど出現しやすい。
+// ペダル側に rarity を指定すると weight = 1/rarity (例: rarity 5 → 1/5 の出現率)。
+const GLOBAL_DROP_POOL = Object.keys(WEAPONS)
+  .map((id) => ({ kind: "weapon", id, weight: 1 }))
   .concat(
     Object.keys(PEDALS)
       .filter((id) => PEDALS[id].kind !== "baby-locked")
-      .map((id) => ({ kind: "pedal", id }))
+      .map((id) => ({
+        kind: "pedal",
+        id,
+        weight: 1 / (PEDALS[id].rarity || 1),
+      }))
   );
+
+// 重み付き 1 件選択。pool 中の各要素 e に対して、確率は e.weight / sumWeight。
+function weightedPick(pool) {
+  if (!pool || pool.length === 0) return null;
+  let total = 0;
+  for (const e of pool) total += e.weight || 1;
+  if (total <= 0) return null;
+  let r = Math.random() * total;
+  for (const e of pool) {
+    r -= e.weight || 1;
+    if (r < 0) return e;
+  }
+  return pool[pool.length - 1];
+}
 
 // 床落ち時の統一アイコン (拾うまで何かは分からない)
 const UNKNOWN_ICON = {
@@ -3214,9 +3235,9 @@ function parseMap() {
   const variantIdx = Math.floor(Math.random() * variants.length);
   const map = variants[variantIdx];
   currentFloor._lastVariantIdx = variantIdx; // ログ用
-  // pickup pool: グローバルプールをシャッフルし、同フロア内で重複なしで配る
-  const pool = shuffle([...GLOBAL_DROP_POOL]);
-  let poolIdx = 0;
+  // pickup pool: グローバルプールから「重複なし」で重み付き抽選。
+  // 同フロア内で同じアイテムは出ない。レア (weight 小) は選ばれにくい。
+  const pool = [...GLOBAL_DROP_POOL];
   const cfg = currentFloor.enemyConfig || {};
   // フォールバック (フロアに該当 type が無い場合)
   const defaultEnemy = { hp: 25, atk: 2, dropChance: 0, dropPool: [] };
@@ -3257,10 +3278,14 @@ function parseMap() {
         if (type === "thorn") enemy.counter = ec.counter != null ? ec.counter : 2;
         enemies.push(enemy);
       } else if (ch === "?") {
-        // ランダム pickup スポット: グローバルプールから乱択
-        if (poolIdx < pool.length) {
-          const { kind, id } = pool[poolIdx++];
-          pickups.set(`${x},${y}`, { kind, id });
+        // ランダム pickup スポット: 重み付き抽選 (重複なし)
+        if (pool.length > 0) {
+          const entry = weightedPick(pool);
+          if (entry) {
+            const idx = pool.indexOf(entry);
+            if (idx >= 0) pool.splice(idx, 1);
+            pickups.set(`${x},${y}`, { kind: entry.kind, id: entry.id });
+          }
         }
       } else if (ch === "n") {
         // 瀕死の騎士 (7F のみ、赤ちゃん未取得時のみ出現)
@@ -3334,12 +3359,13 @@ function showRunClear() {
   showGameEndBanner("★ RUN CLEAR", "#7ed957");
 }
 
-// 敵ドロップ: グローバルプールから乱択 (dropChance のみ enemy 設定を尊重)
+// 敵ドロップ: グローバルプールから重み付き抽選 (dropChance のみ enemy 設定を尊重)
 function rollDrop(enemy) {
   if (Math.random() >= enemy.dropChance) return;
-  const { kind, id } = GLOBAL_DROP_POOL[Math.floor(Math.random() * GLOBAL_DROP_POOL.length)];
-  pickups.set(`${enemy.x},${enemy.y}`, { kind, id });
-  const label = kind === "weapon" ? "武器" : "ペダル";
+  const entry = weightedPick(GLOBAL_DROP_POOL);
+  if (!entry) return;
+  pickups.set(`${enemy.x},${enemy.y}`, { kind: entry.kind, id: entry.id });
+  const label = entry.kind === "weapon" ? "武器" : "ペダル";
   log(`💎 ${label} がドロップ！(${enemy.x},${enemy.y})`, "pickup");
 }
 
