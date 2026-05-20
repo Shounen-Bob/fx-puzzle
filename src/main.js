@@ -896,6 +896,16 @@
       font-size: 0; padding: 1px; background: #2a221a;
       animation: talkable-aura 1.6s ease-in-out infinite;
     }
+    /* 絶命後の騎士 (屍): オーラ無し、グレーアウト */
+    .tile.npc-knight-dead {
+      font-size: 0; padding: 1px;
+      background: #15140f;
+      box-shadow: inset 0 0 6px rgba(0,0,0,0.6);
+    }
+    .tile.npc-knight-dead > .char-svg {
+      animation: none;
+      filter: grayscale(1) brightness(0.45) drop-shadow(0 0 2px rgba(60,30,30,0.5));
+    }
     .tile.npc-mother {
       font-size: 0; padding: 1px; background: #2a2532;
       animation: talkable-aura 1.6s ease-in-out infinite;
@@ -999,6 +1009,19 @@
       z-index: 2999;
       cursor: pointer;
       animation: backdrop-fade-in 200ms ease-out;
+      transition: background 350ms ease-out, backdrop-filter 350ms ease-out;
+    }
+    /* 演出中: 一時的に暗転を薄くしてマップが透けるようにする */
+    #npc-dialog-backdrop.reveal {
+      background: rgba(0, 0, 0, 0.18);
+      backdrop-filter: blur(0px);
+    }
+    #npc-dialog.reveal {
+      opacity: 0.32;
+      transition: opacity 350ms ease-out;
+    }
+    #npc-dialog {
+      transition: opacity 350ms ease-out;
     }
     @keyframes backdrop-fade-in {
       from { opacity: 0; }
@@ -1084,6 +1107,70 @@
       letter-spacing: 1px;
     }
     #system-dialog .sys-close:hover { background: rgba(126,217,87,0.3); color: #fff; }
+
+    /* ===== 加護の演出 (画面中央に金色のリング + 十字) ===== */
+    .blessing-overlay {
+      position: fixed;
+      left: 0; top: 0;
+      width: 100vw; height: 100vh;
+      z-index: 3500;
+      pointer-events: none;
+    }
+    @keyframes blessing-ring {
+      0%   { transform: translate(-50%, -50%) scale(0.2); opacity: 0; }
+      18%  { opacity: 0.95; }
+      100% { transform: translate(-50%, -50%) scale(3.6); opacity: 0; }
+    }
+    @keyframes blessing-cross-pop {
+      0%   { transform: translate(-50%, -50%) scale(0.5); opacity: 0; filter: blur(8px); }
+      18%  { opacity: 1; filter: blur(0); }
+      40%  { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+      80%  { opacity: 1; }
+      100% { transform: translate(-50%, -50%) scale(1.4); opacity: 0; filter: blur(3px); }
+    }
+    @keyframes blessing-sparkle {
+      0%   { transform: translate(-50%, -50%) scale(0.4) rotate(0deg);   opacity: 0; }
+      30%  { opacity: 1; }
+      100% { transform: translate(-50%, -50%) scale(1.6) rotate(180deg); opacity: 0; }
+    }
+    .blessing-overlay .ring {
+      position: absolute;
+      left: 50%; top: 50%;
+      width: 180px; height: 180px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,216,102,0.85) 0%, rgba(255,180,80,0.5) 35%, rgba(255,216,102,0) 70%);
+      animation: blessing-ring 1.6s ease-out forwards;
+    }
+    .blessing-overlay .ring.delay { animation-delay: 280ms; }
+    .blessing-overlay .cross {
+      position: absolute;
+      left: 50%; top: 50%;
+      font-size: 92px;
+      color: #fff;
+      text-shadow: 0 0 18px #ffd866, 0 0 36px #ff8a4d, 0 0 60px #ffaa44;
+      font-family: ui-monospace, monospace;
+      animation: blessing-cross-pop 1.7s cubic-bezier(0.2, 1, 0.4, 1) forwards;
+    }
+    .blessing-overlay .sparkle {
+      position: absolute;
+      left: 50%; top: 50%;
+      width: 130px; height: 130px;
+      background: conic-gradient(
+        from 0deg,
+        rgba(255,216,102,0) 0deg,
+        rgba(255,216,102,0.8) 45deg,
+        rgba(255,216,102,0) 90deg,
+        rgba(255,216,102,0.8) 135deg,
+        rgba(255,216,102,0) 180deg,
+        rgba(255,216,102,0.8) 225deg,
+        rgba(255,216,102,0) 270deg,
+        rgba(255,216,102,0.8) 315deg,
+        rgba(255,216,102,0) 360deg
+      );
+      mask: radial-gradient(circle, #000 30%, transparent 70%);
+      -webkit-mask: radial-gradient(circle, #000 30%, transparent 70%);
+      animation: blessing-sparkle 1.7s ease-out forwards;
+    }
     #npc-dialog .npc-name {
       font-weight: bold;
       color: #ffd866;
@@ -2687,6 +2774,14 @@ function hideEnemyTooltip() { enemyTooltip.style.display = "none"; }
 // NPC (騎士 / 母) ホバー時の説明
 function showNpcTooltip(n, anchorEl) {
   let title, color, flavor;
+  if (n.type === "knight" && n.dead) {
+    enemyTooltip.innerHTML =
+      `<div class="et-title" style="color:#888">🛡 騎士の屍</div>` +
+      `<div style="margin-top:4px;color:#888;font-style:italic;font-size:11px;line-height:1.5">${escapeHtml("返事がない。ただの屍のようだ。")}</div>`;
+    enemyTooltip.style.display = "block";
+    positionEnemyTooltipNear(anchorEl);
+    return;
+  }
   if (n.type === "knight") {
     title = "🛡 瀕死の騎士";
     color = "#cc8866";
@@ -2725,12 +2820,7 @@ function showBabyTooltip(b, anchorEl) {
     `<div style="margin-top:4px;color:#d4d4d4;font-style:italic;font-size:11px;line-height:1.5">${escapeHtml(flavor)}</div>` +
     blessing +
     `<div style="border-top:1px solid #3a3a44;margin:8px 0"></div>` +
-    `<div style="color:#7ed957;font-size:11px;line-height:1.5">` +
-      `🎛 <b>BABY ボード</b> にペダルを装着できる (空き 2 枠):<br>` +
-      `&nbsp;・<b style="color:#88dd66">Body / Cab Sim / Subwoofer</b> → 最大HP を底上げ<br>` +
-      `&nbsp;・<b style="color:#66ddaa">Power Supply</b> → 1 歩ごとに HP 回復<br>` +
-      `<span style="color:#888;font-size:10px">取り外しはピット (P) でのみ</span>` +
-    `</div>`;
+    `<div style="color:#7ed957;font-size:11px;line-height:1.5">🎛 <b>BABY ボード</b> にペダルを装着できる</div>`;
   enemyTooltip.style.display = "block";
   positionEnemyTooltipNear(anchorEl);
 }
@@ -3590,31 +3680,46 @@ function startNpcDialog(npc) {
   if (activeDialog) return;
   let lines, onComplete;
   if (npc.type === "knight") {
-    lines = [
-      "騎士「ぐっ……お前……」",
-      "騎士「この子を……どうか頼む……」",
-      "騎士「最期の力で……加護を……」",
-      "騎士「ありがとう……すまない……」",
-    ];
-    onComplete = () => {
-      // 騎士消滅 → 赤ちゃんスポーン
-      const kx = npc.x, ky = npc.y;
-      const i = npcs.indexOf(npc);
-      if (i >= 0) npcs.splice(i, 1);
+    // 騎士イベント: ① 会話 ② 赤ちゃん登場 ③ 加護演出 ④ 続く会話 → 絶命 (屍化)
+    const spawnBaby = () => {
       babyAcquired = true;
       baby = {
-        x: kx, y: ky,
+        x: npc.x, y: npc.y,
         hp: 10, hpMax: 10, baseHpMax: 10,
         board: [newItem("pedal", "knightsblessing"), null, null],
         facing: { dx: 0, dy: 1 },
         lastBubbleTurn: -99,
       };
-      placeBabyNearPlayer();
-      log("👶 赤ちゃんを託された (HP 10 / 加護: 物理ダメ→1)", "win");
-      babySaySpeech();
+      placeBabyAtNpc(npc);
       recomputeBabyHpMax();
       renderAll();
-      // 取得イベントの通知ダイアログ (会話とは別ウィンドウ風)
+      dialogReveal(1300);
+      log("👶 騎士の腕の中から、小さな赤ちゃんが姿を見せた", "win");
+    };
+    const bestowBlessing = () => {
+      playBlessingEffect();
+      dialogReveal(1700);
+      log("✟ 加護の光が赤ちゃんを包み込んだ", "win");
+    };
+    lines = [
+      "騎士「ぐっ……来てくれたのか……」",
+      "騎士「私はもう、長くない。だが――」",
+      { text: "騎士「この子だけは、どうか頼む……」", onShow: spawnBaby },
+      { text: "騎士「我が騎士の誇りに懸けて、最期の力を――」", onShow: bestowBlessing },
+      "騎士「加護を、授ける」",
+      "騎士「これで……この子は守られる」",
+      "騎士「ありがとう……すまな……」",
+    ];
+    onComplete = () => {
+      // 騎士は絶命 → 屍として戦場に残す (タイルは塞がるが攻撃対象にはならない)
+      npc.dead = true;
+      npc.completed = true;
+      // 赤ちゃんは騎士から離れてプレイヤーの隣へ移動 (追従モードに)
+      if (baby) placeBabyNearPlayer();
+      babySaySpeech();
+      log("🛡 騎士は静かに息を引き取った……", "lose");
+      renderAll();
+      // 取得イベントの通知ダイアログ
       showSystemDialog(
         "👶 赤ちゃんを託された",
         `<p>瀕死の騎士から、小さな赤ちゃんを託された。</p>` +
@@ -3624,9 +3729,7 @@ function startNpcDialog(npc) {
           `<b style="color:#7ed957">🎛 BABY ボードが追加された</b><br>` +
           `<span style="font-size:12px;line-height:1.55">` +
             `画面下のペダルボードに <b>[BABY]</b> 行が増えている。<br>` +
-            `空き 2 枠に次のペダルをドラッグ&ドロップで装着可:<br>` +
-            `&nbsp;・<b style="color:#88dd66">Body / Cab Sim / Subwoofer</b> → 赤ちゃんの<b>最大HP</b>を底上げ<br>` +
-            `&nbsp;・<b style="color:#66ddaa">Power Supply</b> → 1 歩ごとに赤ちゃんの<b>HP回復</b><br>` +
+            `空き 2 枠にペダルをドラッグ&ドロップで装着できる。<br>` +
             `<span style="color:#aaa;font-size:11px">取り外しはピット (P) でのみ</span>` +
           `</span>` +
         `</div>` +
@@ -3660,6 +3763,50 @@ function startNpcDialog(npc) {
   }
   activeDialog = { npcType: npc.type, lines, idx: 0, onComplete };
   renderNpcDialog();
+  fireLineOnShow();
+}
+
+// ===== 演出ヘルパー =====
+// 加護の光を画面中央にフラッシュ。ダイアログ上 (z-index 3500) に出るので会話越しでも見える。
+function playBlessingEffect() {
+  document.getElementById("blessing-overlay")?.remove();
+  const ov = document.createElement("div");
+  ov.id = "blessing-overlay";
+  ov.className = "blessing-overlay";
+  ov.innerHTML =
+    `<div class="ring"></div>` +
+    `<div class="ring delay"></div>` +
+    `<div class="sparkle"></div>` +
+    `<div class="cross">✟</div>`;
+  document.body.appendChild(ov);
+  setTimeout(() => ov.remove(), 1750);
+}
+
+// NPC ダイアログを一時的に半透明にしてマップ演出を見せる
+function dialogReveal(durationMs) {
+  const backdrop = document.getElementById("npc-dialog-backdrop");
+  const dialog   = document.getElementById("npc-dialog");
+  if (backdrop) backdrop.classList.add("reveal");
+  if (dialog)   dialog.classList.add("reveal");
+  setTimeout(() => {
+    if (backdrop) backdrop.classList.remove("reveal");
+    if (dialog)   dialog.classList.remove("reveal");
+  }, durationMs);
+}
+
+// ダイアログ各行を { text, onShow? } 形式に揃えるためのアクセサ
+function dialogLineText(line) {
+  return typeof line === "string" ? line : (line && line.text) || "";
+}
+function dialogLineCount(lines) {
+  return Array.isArray(lines) ? lines.length : 0;
+}
+function fireLineOnShow() {
+  if (!activeDialog) return;
+  const line = activeDialog.lines[activeDialog.idx];
+  if (line && typeof line === "object" && typeof line.onShow === "function") {
+    try { line.onShow(); } catch (e) { console.error(e); }
+  }
 }
 
 // 取得イベントなどを伝えるシステム通知ダイアログ (中央 + 暗転 + 緑枠)。
@@ -3690,7 +3837,7 @@ function showSystemDialog(titleHtml, bodyHtml) {
 function advanceNpcDialog() {
   if (!activeDialog) return;
   activeDialog.idx++;
-  if (activeDialog.idx >= activeDialog.lines.length) {
+  if (activeDialog.idx >= dialogLineCount(activeDialog.lines)) {
     const cb = activeDialog.onComplete;
     activeDialog = null;
     document.getElementById("npc-dialog")?.remove();
@@ -3699,6 +3846,7 @@ function advanceNpcDialog() {
     return;
   }
   renderNpcDialog();
+  fireLineOnShow();
 }
 
 function renderNpcDialog() {
@@ -3725,10 +3873,12 @@ function renderNpcDialog() {
   const name = activeDialog.npcType === "knight" ? "瀕死の騎士"
              : activeDialog.npcType === "mother" ? "母"
              : "???";
+  const total = dialogLineCount(activeDialog.lines);
+  const text = dialogLineText(activeDialog.lines[activeDialog.idx]);
   el.innerHTML =
     `<div class="npc-name">${name}</div>` +
-    `<div class="npc-line">${activeDialog.lines[activeDialog.idx]}</div>` +
-    `<div class="npc-hint">クリック / Space で次へ (${activeDialog.idx + 1}/${activeDialog.lines.length})</div>`;
+    `<div class="npc-line">${text}</div>` +
+    `<div class="npc-hint">クリック / Space で次へ (${activeDialog.idx + 1}/${total})</div>`;
 }
 
 // プレイヤーが NPC に隣接したら自動で会話発火
@@ -3993,7 +4143,8 @@ function renderMap() {
     const t = tileAt(n.x, n.y);
     if (!t) continue;
     if (n.type === "knight") {
-      t.className = "tile npc-knight";
+      // dead フラグで屍化: オーラ無し、グレースケール
+      t.className = n.dead ? "tile npc-knight-dead" : "tile npc-knight";
       t.innerHTML = dyingKnightSvg();
     } else if (n.type === "mother") {
       t.className = "tile npc-mother";
