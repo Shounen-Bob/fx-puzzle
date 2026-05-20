@@ -859,6 +859,135 @@
       text-align: center;
     }
 
+    /* ===== 赤ちゃん / NPC ===== */
+    @keyframes baby-idle {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-1px); }
+    }
+    .baby-body { transform-origin: 50% 95%; animation: baby-idle 1.4s ease-in-out infinite; }
+    .tile.baby { font-size: 0; padding: 1px; background: #2a2228; }
+    .tile.baby.on-pit-bg  { background: #1a3a4a; }
+    .tile.baby.on-goal-bg { background: #4a3a10; }
+    .tile.npc-knight { font-size: 0; padding: 1px; background: #3a2820; }
+    .tile.npc-mother { font-size: 0; padding: 1px; background: #2a2832; }
+    @keyframes knight-bleed {
+      0%, 100% { filter: drop-shadow(0 0 2px rgba(200,40,40,0.5)); }
+      50%      { filter: drop-shadow(0 0 6px rgba(220,60,60,0.85)); }
+    }
+    .tile.npc-knight > .char-svg { animation: knight-bleed 1.6s ease-in-out infinite; }
+    .tile.npc-mother > .char-svg {
+      animation: baby-idle 1.6s ease-in-out infinite;
+      filter: drop-shadow(0 0 4px rgba(255,200,180,0.45));
+    }
+
+    /* 赤ちゃん HP ミニバー (タイル下端、ピンク系) */
+    .tile-hp-fill-baby { background: #ff88bb; }
+
+    /* 赤ちゃんの吹き出し */
+    .baby-speech-bubble {
+      position: absolute;
+      z-index: 70;
+      padding: 4px 9px;
+      background: linear-gradient(180deg, #fff4f8, #ffe0ea);
+      color: #5a2238;
+      font-family: ui-monospace, "Menlo", monospace;
+      font-size: 12px;
+      font-weight: bold;
+      border: 1.5px solid #cc7799;
+      border-radius: 12px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+      pointer-events: none;
+      animation: baby-bubble-pop 1.6s ease-out forwards;
+      white-space: nowrap;
+    }
+    .baby-speech-bubble::after {
+      content: "";
+      position: absolute;
+      bottom: -6px;
+      left: 14px;
+      border-style: solid;
+      border-width: 6px 6px 0 0;
+      border-color: #ffe0ea transparent transparent transparent;
+    }
+    .baby-speech-bubble.weak  { color: #8a4422; background: linear-gradient(180deg, #fff0e0, #ffd5b8); border-color: #cc8855; }
+    .baby-speech-bubble.weak::after { border-top-color: #ffd5b8; }
+    .baby-speech-bubble.dying { color: #883366; background: linear-gradient(180deg, #f8e0e8, #f0c0d8); border-color: #aa5577; }
+    .baby-speech-bubble.dying::after { border-top-color: #f0c0d8; }
+    .baby-speech-bubble.hurt  { color: #aa1144; background: linear-gradient(180deg, #ffe6ee, #ffcad6); border-color: #cc3355; }
+    .baby-speech-bubble.hurt::after  { border-top-color: #ffcad6; }
+    .baby-speech-bubble.die   { color: #6a2244; background: linear-gradient(180deg, #e8d0d8, #d0a8b8); border-color: #774455; }
+    .baby-speech-bubble.die::after   { border-top-color: #d0a8b8; }
+    @keyframes baby-bubble-pop {
+      0%   { transform: translateY(4px) scale(0.7); opacity: 0; }
+      18%  { transform: translateY(-2px) scale(1.05); opacity: 1; }
+      30%  { transform: translateY(0) scale(1.0); opacity: 1; }
+      85%  { opacity: 1; }
+      100% { transform: translateY(-3px); opacity: 0; }
+    }
+    /* 死亡時バブルは長め */
+    .baby-speech-bubble.die { animation-duration: 2400ms; }
+
+    /* ===== NPC ダイアログ ===== */
+    #npc-dialog {
+      position: fixed;
+      left: 50%;
+      bottom: 18%;
+      transform: translateX(-50%);
+      min-width: 360px;
+      max-width: 520px;
+      padding: 16px 22px;
+      background: linear-gradient(180deg, #1a1820, #0f0d14);
+      color: #f0e6d6;
+      border: 2px solid #c9a531;
+      border-radius: 10px;
+      font-family: ui-monospace, "Menlo", monospace;
+      font-size: 15px;
+      line-height: 1.6;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+      z-index: 3000;
+      cursor: pointer;
+    }
+    #npc-dialog .npc-name {
+      font-weight: bold;
+      color: #ffd866;
+      font-size: 13px;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+      padding-bottom: 5px;
+      border-bottom: 1px solid #3a3220;
+    }
+    #npc-dialog .npc-line {
+      color: #f0e6d6;
+      white-space: pre-wrap;
+    }
+    #npc-dialog .npc-hint {
+      text-align: right;
+      font-size: 10px;
+      color: #888;
+      margin-top: 8px;
+      letter-spacing: 1px;
+    }
+
+    /* ===== 赤ちゃんボード (4 番目の行) ===== */
+    .board-row.row-b { border-color: transparent; }
+    .board-row.row-b.active {
+      border-color: #ff88bb;
+      background: rgba(255, 136, 187, 0.06);
+    }
+    .slot.blessing-locked {
+      border-color: #ffd866 !important;
+      box-shadow: inset 0 0 10px rgba(255,216,102,0.35) !important;
+      cursor: not-allowed;
+    }
+    .slot.blessing-locked::after {
+      content: "✟";
+      position: absolute;
+      top: 2px; right: 4px;
+      color: #ffd866;
+      font-size: 12px;
+      text-shadow: 0 0 4px #ffd866;
+    }
+
     /* ===== 1F チュートリアル吹き出し ===== */
     .tutorial-bubble {
       position: absolute;
@@ -1220,7 +1349,7 @@ const FLOORS = [
       [
         "######################",
         "#.@..................#",
-        "#....................#",
+        "#...........n........#",
         "#.E.E.K........FXF.A.#",
         "#....................#",
         "#......##............#",
@@ -1236,7 +1365,7 @@ const FLOORS = [
       [
         "######################",
         "#.@..................#",
-        "#....................#",
+        "#.......n............#",
         "#.E..F..I..Q..F..I...#",
         "#....................#",
         "#...##....##....##...#",
@@ -1356,7 +1485,7 @@ const FLOORS = [
       [
         "######################",
         "#.@..................#",
-        "#....................#",
+        "#..........m.........#",
         "#.F......Q....W....I.#",
         "#....................#",
         "#......##....##......#",
@@ -1371,7 +1500,7 @@ const FLOORS = [
       ],
       [
         "######################",
-        "#....................#",
+        "#......m.............#",
         "#.@..................#",
         "#....................#",
         "#.F....##....##..X.I.#",
@@ -1501,6 +1630,42 @@ const WEAPONS = {
   }
 })();
 
+// ========================================================================
+// 11F-20F: 既存 1-10F を clone して敵 HP/ATK を ×1.5、dropChance +0.05。
+// マップは流用 (n/m の NPC 文字も含まれるが parseMap で babyAcquired / motherKey
+// チェックして条件を満たさなければ無視されるため、17F の騎士は再出現しない、
+// 20F の母も再登場しない)。
+// 名前は元の "7F: ノイズフロア" → "17F: ノイズフロア †" の形で生成。
+// ========================================================================
+(function generateExtendedFloors() {
+  const cloneFloor = (base) => ({
+    id: base.id + 10,
+    pickupPool: [...base.pickupPool],
+    maps: base.maps.map((m) => m.slice()),
+    enemyConfig: Object.fromEntries(
+      Object.entries(base.enemyConfig).map(([k, v]) => [
+        k,
+        { ...v, dropPool: [...(v.dropPool || [])] },
+      ])
+    ),
+  });
+  const baseCount = FLOORS.length; // 10 のはず
+  for (let i = 0; i < baseCount; i++) {
+    const base = FLOORS[i];
+    const ext = cloneFloor(base);
+    const baseLabel = (base.name || `Floor ${base.id}`).replace(/^\d+F:\s*/, "");
+    ext.name = `${ext.id}F: ${baseLabel} †`;
+    ext.hint = (base.hint || "") + "  ※ 鍵を手にした奥階層。敵 HP/ATK ×1.5";
+    for (const type in ext.enemyConfig) {
+      const ec = ext.enemyConfig[type];
+      ec.hp = Math.floor(ec.hp * 1.5);
+      ec.atk = Math.max(1, Math.floor(ec.atk * 1.5));
+      ec.dropChance = Math.min(1, (ec.dropChance || 0) + 0.05);
+    }
+    FLOORS.push(ext);
+  }
+})();
+
 // プレイヤーの装備スロット (Q/W/E に武器ID または null)
 // 初期: Q=ロングソードのみ、W/E は無装備 (拾うまで使えない)
 const weapons = {
@@ -1523,8 +1688,13 @@ const WEAPON_MAP = {
 
 // グローバル・ドロップ・プール: 全武器 + 全ペダル。
 // ?スポット / 敵ドロップともにここから乱択 (フロアごとの pickupPool / dropPool は使用しない)
+// kind:"baby-locked" のペダル (騎士の最期の加護) はドロップ対象から除外する。
 const GLOBAL_DROP_POOL = Object.keys(WEAPONS).map((id) => ({ kind: "weapon", id }))
-  .concat(Object.keys(PEDALS).map((id) => ({ kind: "pedal", id })));
+  .concat(
+    Object.keys(PEDALS)
+      .filter((id) => PEDALS[id].kind !== "baby-locked")
+      .map((id) => ({ kind: "pedal", id }))
+  );
 
 // 床落ち時の統一アイコン (拾うまで何かは分からない)
 const UNKNOWN_ICON = {
@@ -1567,6 +1737,30 @@ function recomputePlayerHpMax() {
   } else {
     if (player.hp > newMax) player.hp = newMax;
     log(`♬ 最大HP −${oldMax - newMax} (現 ${player.hp}/${player.hpMax})`, "");
+  }
+}
+
+// 赤ちゃんボードの maxHpBoost passive を集計して baby.hpMax を再計算。
+// baby が存在しない場合は no-op。装着/取り外し時に呼び出す。
+function recomputeBabyHpMax() {
+  if (!baby) return;
+  let bonus = 0;
+  for (const it of baby.board) {
+    if (!it) continue;
+    const p = PEDALS[it.id];
+    if (!p || p.kind !== "passive" || p.hook !== "maxHpBoost") continue;
+    bonus += p.red || 0;
+  }
+  const oldMax = baby.hpMax;
+  const newMax = baby.baseHpMax + bonus;
+  if (newMax === oldMax) return;
+  baby.hpMax = newMax;
+  if (newMax > oldMax) {
+    baby.hp += (newMax - oldMax);
+    log(`👶 赤ちゃんの最大HP +${newMax - oldMax} (現 ${baby.hp}/${baby.hpMax})`, "win");
+  } else {
+    if (baby.hp > newMax) baby.hp = newMax;
+    log(`👶 赤ちゃんの最大HP −${oldMax - newMax} (現 ${baby.hp}/${baby.hpMax})`, "");
   }
 }
 
@@ -1764,7 +1958,7 @@ function getSlotPedalIds(boardKey) {
 }
 let activeBoard = "q";
 let pendingAttack = null; // null | "q" | "w" | "e" — 構え中の攻撃キー
-const ATTACK_COLORS = { q: "#ffd866", w: "#88ddff", e: "#7ed957" };
+const ATTACK_COLORS = { q: "#ffd866", w: "#88ddff", e: "#7ed957", b: "#ff88bb" };
 
 // ピット（編集可能エリア）とゴール
 const pits = new Set();   // "x,y" 形式
@@ -1776,6 +1970,19 @@ function isOnPit() {
 /** @type {{x:number,y:number,type:string,isBoss?:boolean,hp:number,hpMax:number,atk:number,dropChance:number,dropPool:string[],status:any[]}[]} */
 const enemies = [];
 const walls = new Set();
+
+// ===== 赤ちゃんイベント関連の永続状態 (ランを跨いでは持ち越さない) =====
+// babyAcquired: 7F で騎士から託された後 true。再度 7F に来ても騎士は出ない。
+// motherKey: 10F で母から鍵を受け取った後 true。10F の G で次フロアへ。
+// baby: 生存中なら { x, y, hp, hpMax, baseHpMax: 10, board: [item, null, null],
+//                   facing, lastBubbleTurn, recentBubble }。
+//       死亡時は null に戻し、復活させない。
+const npcs = [];               // [{ type: "knight"|"mother", x, y, completed }]
+let baby = null;
+let babyAcquired = false;
+let motherKey = false;
+let activeDialog = null;       // { npcType, lines, idx, onComplete } | null
+const BABY_BOARD_SIZE = 3;
 
 // 武器・ペダル固有のランタイム状態 (doAttack を跨いで保持)
 //   sustainer    : 最後にヒットさせた敵への連続ヒット回数 (別の敵に当てるとリセット)
@@ -2423,6 +2630,7 @@ function shuffle(arr) {
 
 function parseMap() {
   enemies.length = 0;
+  npcs.length = 0;
   walls.clear();
   pits.clear();
   pickups.clear();
@@ -2479,6 +2687,16 @@ function parseMap() {
           const { kind, id } = pool[poolIdx++];
           pickups.set(`${x},${y}`, { kind, id });
         }
+      } else if (ch === "n") {
+        // 瀕死の騎士 (7F のみ、赤ちゃん未取得時のみ出現)
+        if (!babyAcquired) {
+          npcs.push({ type: "knight", x, y, completed: false });
+        }
+      } else if (ch === "m") {
+        // 母 (10F のみ、赤ちゃん生存時かつ鍵未取得時のみ出現)
+        if (baby && !motherKey) {
+          npcs.push({ type: "mother", x, y, completed: false });
+        }
       } else if (PEDAL_MAP[ch]) {
         pickups.set(`${x},${y}`, { kind: "pedal", id: PEDAL_MAP[ch] });
       } else if (WEAPON_MAP[ch]) {
@@ -2502,7 +2720,13 @@ function loadFloor(idx) {
   if (!isFirst) {
     const heal = 25;
     player.hp = Math.min(player.hpMax, player.hp + heal);
+    if (baby) {
+      const heal2 = Math.max(1, Math.ceil(baby.hpMax * 0.25));
+      baby.hp = Math.min(baby.hpMax, baby.hp + heal2);
+    }
   }
+  // 赤ちゃん再配置: プレイヤーの隣 (4方向 → 斜め) で空きマスを探す
+  if (baby) placeBabyNearPlayer();
   const variantLetter = String.fromCharCode(65 + (currentFloor._lastVariantIdx || 0));
   log(`=== ${currentFloor.name} [variant ${variantLetter}] ===`, "win");
   log(currentFloor.hint);
@@ -2517,6 +2741,8 @@ function loadFloor(idx) {
     if (p > 0) parts.push(`ペダル ${p}`);
     log(`床落ち: ${parts.join(" / ")}`, "pickup");
   }
+  // フロア入場時点で NPC に隣接していたら会話発火
+  checkNpcAdjacency();
   renderAll();
 }
 
@@ -2978,6 +3204,309 @@ function enemySvg(e) {
   return slimeSvg(e.type, e.isBoss);
 }
 
+// ===== 赤ちゃん SVG (小さい頭でっかちの幼児) =====
+function babySvg() {
+  return (
+    `<svg class="char-svg" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">` +
+    `<g class="baby-body">` +
+      // 頭
+      `<circle cx="16" cy="13" r="7.5" fill="#ffe0c0" stroke="#5a3a20" stroke-width="0.8"/>` +
+      // ほっぺ
+      `<circle cx="10.5" cy="15" r="1.7" fill="#ffb0b8" opacity="0.85"/>` +
+      `<circle cx="21.5" cy="15" r="1.7" fill="#ffb0b8" opacity="0.85"/>` +
+      // 目
+      `<circle cx="13" cy="12.5" r="0.9" fill="#1a1a1a"/>` +
+      `<circle cx="19" cy="12.5" r="0.9" fill="#1a1a1a"/>` +
+      // 口
+      `<path d="M 14.5 16.5 Q 16 17.5, 17.5 16.5" stroke="#aa5566" stroke-width="0.9" fill="none" stroke-linecap="round"/>` +
+      // 胴
+      `<rect x="11" y="20" width="10" height="9" rx="3" fill="#ffc8d4" stroke="#5a3a20" stroke-width="0.8"/>` +
+      // よだれかけのリボン
+      `<path d="M 12 21 L 16 23 L 20 21" stroke="#cc4477" stroke-width="0.7" fill="none"/>` +
+    `</g></svg>`
+  );
+}
+
+// ===== NPC: 瀕死の騎士 SVG (倒れ伏し、血だまり) =====
+function dyingKnightSvg() {
+  return (
+    `<svg class="char-svg" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">` +
+      // 血だまり
+      `<ellipse cx="17" cy="26" rx="11" ry="3" fill="#882233" opacity="0.65"/>` +
+      // 横たわる胴 (寝そべり)
+      `<rect x="6" y="20" width="20" height="6" rx="2.5" fill="#9a8a5a" stroke="#3a2a10" stroke-width="0.7"/>` +
+      // 兜
+      `<ellipse cx="9" cy="20" rx="4.5" ry="3.5" fill="#bbb0a0" stroke="#3a2a10" stroke-width="0.7"/>` +
+      `<rect x="5" y="19" width="9" height="1.4" fill="#5a4a3a"/>` +
+      // 羽根 (赤、しおれた感じで斜め)
+      `<path d="M 9 17 Q 7 13, 4 12 L 5 15 L 5.5 17" fill="#cc3344" stroke="#3a1010" stroke-width="0.5"/>` +
+      // 盾 (倒れた)
+      `<rect x="20" y="17" width="7" height="9" rx="1.2" fill="#cca844" stroke="#3a2a10" stroke-width="0.7"/>` +
+      `<path d="M 23.5 19 L 23.5 24 M 21.5 21.5 L 25.5 21.5" stroke="#3a2a10" stroke-width="0.6"/>` +
+    `</svg>`
+  );
+}
+
+// ===== NPC: 母 SVG (立ち姿、優しい笑顔) =====
+function motherSvg() {
+  return (
+    `<svg class="char-svg" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">` +
+      // 髪 (長め)
+      `<path d="M 8 11 Q 8 4, 16 4 Q 24 4, 24 11 L 24 22 Q 23 24, 21 24 L 11 24 Q 9 24, 8 22 Z" fill="#5a3a2a"/>` +
+      // 顔
+      `<circle cx="16" cy="11" r="5.5" fill="#ffe0c0" stroke="#3a2a10" stroke-width="0.7"/>` +
+      // 前髪
+      `<path d="M 11 8 Q 16 5, 21 8 L 20 10 L 16 8.5 L 12 10 Z" fill="#5a3a2a"/>` +
+      // 目
+      `<circle cx="14" cy="11" r="0.8" fill="#1a1a1a"/>` +
+      `<circle cx="18" cy="11" r="0.8" fill="#1a1a1a"/>` +
+      // 口 (優しい笑顔)
+      `<path d="M 14.5 13.5 Q 16 14.6, 17.5 13.5" stroke="#aa5566" stroke-width="0.8" fill="none" stroke-linecap="round"/>` +
+      // 服 (ドレス)
+      `<path d="M 10 17 L 8 30 L 24 30 L 22 17 Z" fill="#bb88aa" stroke="#3a2a10" stroke-width="0.7"/>` +
+      // エプロン
+      `<rect x="13" y="18" width="6" height="9" fill="#f0e6d6" opacity="0.85"/>` +
+    `</svg>`
+  );
+}
+
+// ========================================================================
+// 赤ちゃん配置 / フォロー / swap
+// ========================================================================
+function isCellFreeForBaby(x, y, ignoreBaby) {
+  if (!inBounds(x, y)) return false;
+  if (walls.has(`${x},${y}`)) return false;
+  if (pits.has(`${x},${y}`)) return false;
+  if (goal.x === x && goal.y === y) return false;
+  if (player.x === x && player.y === y) return false;
+  for (const e of enemies) {
+    if (e.hp <= 0) continue;
+    if (e.x === x && e.y === y) return false;
+  }
+  for (const n of npcs) {
+    if (n.x === x && n.y === y) return false;
+  }
+  if (!ignoreBaby && baby && baby.x === x && baby.y === y) return false;
+  return true;
+}
+
+// プレイヤーの近くに赤ちゃんを置く (フロア遷移時 / スポーン時)
+// 4方向 → 斜め → ランダム空きセルの順で空きを探す
+function placeBabyNearPlayer() {
+  if (!baby) return;
+  const ring4 = [[1,0],[-1,0],[0,1],[0,-1]];
+  const ring8 = [[1,1],[-1,1],[1,-1],[-1,-1]];
+  for (const [dx, dy] of ring4) {
+    const x = player.x + dx, y = player.y + dy;
+    if (isCellFreeForBaby(x, y, true)) { baby.x = x; baby.y = y; return; }
+  }
+  for (const [dx, dy] of ring8) {
+    const x = player.x + dx, y = player.y + dy;
+    if (isCellFreeForBaby(x, y, true)) { baby.x = x; baby.y = y; return; }
+  }
+  // フォールバック: 全マップ走査
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      if (isCellFreeForBaby(x, y, true)) { baby.x = x; baby.y = y; return; }
+    }
+  }
+}
+
+// プレイヤーの旧位置に追従。塞がってたら待機。
+function doBabyFollow(oldPlayerX, oldPlayerY) {
+  if (!baby) return;
+  // すでにプレイヤー隣接なら動かない (チラつき抑制)
+  const adj = Math.abs(baby.x - player.x) + Math.abs(baby.y - player.y);
+  if (adj <= 1) return;
+  if (isCellFreeForBaby(oldPlayerX, oldPlayerY, true)) {
+    // 赤ちゃんの向きをプレイヤー側に
+    baby.facing = { dx: Math.sign(player.x - baby.x), dy: Math.sign(player.y - baby.y) };
+    baby.x = oldPlayerX;
+    baby.y = oldPlayerY;
+  }
+}
+
+function npcAt(x, y) {
+  return npcs.find((n) => n.x === x && n.y === y);
+}
+
+// ========================================================================
+// NPC ダイアログ
+// ========================================================================
+function startNpcDialog(npc) {
+  if (activeDialog) return;
+  let lines, onComplete;
+  if (npc.type === "knight") {
+    lines = [
+      "騎士「ぐっ……お前……」",
+      "騎士「この子を……どうか頼む……」",
+      "騎士「最期の力で……加護を……」",
+      "騎士「ありがとう……すまない……」",
+    ];
+    onComplete = () => {
+      // 騎士消滅 → 赤ちゃんスポーン
+      const kx = npc.x, ky = npc.y;
+      const i = npcs.indexOf(npc);
+      if (i >= 0) npcs.splice(i, 1);
+      babyAcquired = true;
+      baby = {
+        x: kx, y: ky,
+        hp: 10, hpMax: 10, baseHpMax: 10,
+        board: [newItem("pedal", "knightsblessing"), null, null],
+        facing: { dx: 0, dy: 1 },
+        lastBubbleTurn: -99,
+      };
+      placeBabyNearPlayer();
+      log("👶 赤ちゃんを託された (HP 10 / 加護: 物理ダメ→1)", "win");
+      babySaySpeech();
+      recomputeBabyHpMax();
+      renderAll();
+    };
+  } else if (npc.type === "mother") {
+    lines = [
+      "母「……ああ! その子は……うちの子!」",
+      "母「無事に……無事に連れてきてくれたのね」",
+      "母「ありがとう……本当にありがとう」",
+      "母「お礼に、奥への扉の鍵を渡すわ。気をつけて」",
+    ];
+    onComplete = () => {
+      motherKey = true;
+      npc.completed = true;
+      log("🗝 母から 11F 以降の鍵を受け取った! ゴール (G) で次の階層へ", "win");
+      renderAll();
+    };
+  } else {
+    return;
+  }
+  activeDialog = { npcType: npc.type, lines, idx: 0, onComplete };
+  renderNpcDialog();
+}
+
+function advanceNpcDialog() {
+  if (!activeDialog) return;
+  activeDialog.idx++;
+  if (activeDialog.idx >= activeDialog.lines.length) {
+    const cb = activeDialog.onComplete;
+    activeDialog = null;
+    document.getElementById("npc-dialog")?.remove();
+    if (cb) cb();
+    return;
+  }
+  renderNpcDialog();
+}
+
+function renderNpcDialog() {
+  if (!activeDialog) {
+    document.getElementById("npc-dialog")?.remove();
+    return;
+  }
+  let el = document.getElementById("npc-dialog");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "npc-dialog";
+    el.addEventListener("click", advanceNpcDialog);
+    document.body.appendChild(el);
+  }
+  const name = activeDialog.npcType === "knight" ? "瀕死の騎士"
+             : activeDialog.npcType === "mother" ? "母"
+             : "???";
+  el.innerHTML =
+    `<div class="npc-name">${name}</div>` +
+    `<div class="npc-line">${activeDialog.lines[activeDialog.idx]}</div>` +
+    `<div class="npc-hint">クリック / Space で次へ (${activeDialog.idx + 1}/${activeDialog.lines.length})</div>`;
+}
+
+// プレイヤーが NPC に隣接したら自動で会話発火
+function checkNpcAdjacency() {
+  if (activeDialog) return;
+  for (const n of npcs) {
+    if (n.completed) continue;
+    const d = Math.abs(n.x - player.x) + Math.abs(n.y - player.y);
+    if (d === 1) {
+      startNpcDialog(n);
+      return;
+    }
+  }
+}
+
+// ========================================================================
+// 赤ちゃんダメージ / 死亡
+// ========================================================================
+// 加護が刺さっていれば物理ダメは 1 にクランプ。
+function hasBlessing() {
+  if (!baby) return false;
+  return baby.board.some((it) => it && it.id === "knightsblessing");
+}
+
+function damageBaby(rawDmg, source) {
+  if (!baby) return;
+  let dmg = rawDmg;
+  if (source === "physical" && hasBlessing()) dmg = 1;
+  baby.hp -= dmg;
+  showFloatingDamage(baby.x, baby.y, dmg, "");
+  spawnHurtFx(baby.x, baby.y);
+  if (baby.hp <= 0) {
+    baby.hp = 0;
+    log("👶 赤ちゃんが力尽きた……", "lose");
+    // 死亡台詞 → 短時間後に消滅 (renderMap が baby:null を見て自動でタイル戻す)
+    showBabyBubble("あぅ・・・", "die");
+    setTimeout(() => {
+      baby = null;
+      renderAll();
+    }, 1400);
+  } else {
+    // 被弾時の即時バブル ("あうっ!" or "ぎゃっ")
+    const cry = Math.random() < 0.5 ? "あうっ！" : "ぎゃっ";
+    showBabyBubble(cry, "hurt");
+  }
+}
+
+// ========================================================================
+// 赤ちゃんの吹き出し (HP閾値ベース + 被弾時)
+// ========================================================================
+// クールダウン: 被弾以外は 3 ターン に 1 回まで
+const BABY_BUBBLE_COOLDOWN_TURNS = 3;
+function showBabyBubble(text, klass) {
+  if (!baby) return;
+  const t = tileAt(baby.x, baby.y);
+  if (!t) return;
+  // 既存バブルを除去 (重ねない)
+  const old = document.getElementById("baby-speech-bubble-active");
+  if (old) old.remove();
+  const bubble = document.createElement("div");
+  bubble.id = "baby-speech-bubble-active";
+  bubble.className = "baby-speech-bubble" + (klass ? ` ${klass}` : "");
+  bubble.textContent = text;
+  document.body.appendChild(bubble);
+  // 位置決め: タイル上端から少し上
+  const rect = t.getBoundingClientRect();
+  bubble.style.left = `${rect.left + window.scrollX - 4}px`;
+  bubble.style.top  = `${rect.top + window.scrollY - 26}px`;
+  const removeMs = klass === "die" ? 2400 : 1700;
+  setTimeout(() => bubble.remove(), removeMs);
+}
+
+// HP 閾値に応じた台詞 (ランダム要素あり)
+function babySaySpeech() {
+  if (!baby) return;
+  if (turn - baby.lastBubbleTurn < BABY_BUBBLE_COOLDOWN_TURNS) return;
+  const ratio = baby.hp / baby.hpMax;
+  let text, klass = "";
+  if (ratio >= 0.999) {
+    text = "きゃっきゃっ";
+  } else if (ratio >= 0.5) {
+    text = Math.random() < 0.5 ? "ばぶばぶ" : "たいたい";
+  } else if (ratio > 0.2) {
+    text = "ぜぇ…ゼぇ…";
+    klass = "weak";
+  } else {
+    text = "ひゅー…ひゅー…";
+    klass = "dying";
+  }
+  baby.lastBubbleTurn = turn;
+  showBabyBubble(text, klass);
+}
+
 // ========================================================================
 // 描画
 // ========================================================================
@@ -3065,6 +3594,40 @@ function renderMap() {
       }
     }
   }
+  // NPC 描画 (敵より後、プレイヤーより前)
+  for (const n of npcs) {
+    const t = tileAt(n.x, n.y);
+    if (!t) continue;
+    if (n.type === "knight") {
+      t.className = "tile npc-knight";
+      t.innerHTML = dyingKnightSvg();
+    } else if (n.type === "mother") {
+      t.className = "tile npc-mother";
+      t.innerHTML = motherSvg();
+    }
+  }
+  // 赤ちゃん描画 (敵 / NPC より後、プレイヤーより前)
+  if (baby && baby.hp > 0) {
+    const t = tileAt(baby.x, baby.y);
+    if (t) {
+      const bkey = `${baby.x},${baby.y}`;
+      t.className = "tile baby";
+      if (pits.has(bkey)) t.classList.add("on-pit-bg");
+      if (goal.x === baby.x && goal.y === baby.y) t.classList.add("on-goal-bg");
+      t.innerHTML = babySvg();
+      // HP ミニバー
+      const ratio = Math.max(0, baby.hp / baby.hpMax);
+      const bar = document.createElement("div");
+      bar.className = "tile-hp-bar";
+      const fill = document.createElement("div");
+      fill.className = "tile-hp-fill tile-hp-fill-baby";
+      if (ratio < 0.2)      fill.classList.add("bad");
+      else if (ratio < 0.5) fill.classList.add("warn");
+      fill.style.width = `${(ratio * 100).toFixed(1)}%`;
+      bar.appendChild(fill);
+      t.appendChild(bar);
+    }
+  }
   const pt = tileAt(player.x, player.y);
   pt.className = "tile player";
   // ピット/ゴール上なら背景を維持
@@ -3124,9 +3687,17 @@ function elementTargetClass(element) {
 
 function renderHud() {
   const ratio = Math.max(0, player.hp / player.hpMax);
-  hpEl.innerHTML =
+  let inner =
     `HP ${player.hp}/${player.hpMax}` +
     `<span class="hp-bar-wrap"><span class="hp-bar-fill" style="width:${(ratio * 100).toFixed(0)}%"></span></span>`;
+  if (baby) {
+    const br = Math.max(0, baby.hp / baby.hpMax);
+    inner +=
+      `<span style="margin-left:14px;color:#ff88bb">👶 ${baby.hp}/${baby.hpMax}</span>` +
+      `<span class="hp-bar-wrap" style="width:60px"><span class="hp-bar-fill" style="width:${(br*100).toFixed(0)}%;background:#ff88bb"></span></span>`;
+  }
+  if (motherKey) inner += `<span style="margin-left:10px;color:#ffd866">🗝 鍵</span>`;
+  hpEl.innerHTML = inner;
   const fkey = `${player.facing.dx},${player.facing.dy}`;
   faceEl.textContent = `向き: ${FACING_CHAR[fkey] ?? "?"}`;
   turnEl.textContent = `Turn: ${turn}`;
@@ -3134,6 +3705,152 @@ function renderHud() {
   if (floorWarpEl.value !== String(currentFloorIdx)) {
     floorWarpEl.value = String(currentFloorIdx);
   }
+}
+
+// 赤ちゃんボードを Q/W/E の下に並べる用のレンダリング
+function renderBabyBoard() {
+  if (!baby) return;
+  const row = document.createElement("div");
+  row.className = "board-row row-b" + (activeBoard === "b" ? " active" : "");
+  row.dataset.board = "b";
+
+  const label = document.createElement("button");
+  label.type = "button";
+  label.className = "board-label";
+  label.style.color = "#ff88bb";
+  label.style.borderColor = "#ff88bb";
+  label.innerHTML =
+    `<div style="font-weight:bold;font-size:14px">[BABY]</div>` +
+    `<div style="font-size:10px;opacity:0.9">HP ${baby.hp}/${baby.hpMax}</div>`;
+  label.title = "赤ちゃんボード — passive (HP/防御) のみ装着可。加護はロック。";
+  label.addEventListener("click", () => {
+    activeBoard = "b";
+    label.blur();
+    renderAll();
+  });
+  row.appendChild(label);
+
+  for (let i = 0; i < BABY_BOARD_SIZE; i++) {
+    const slot = createBabySlot(i);
+    row.appendChild(slot);
+    if (i < BABY_BOARD_SIZE - 1) {
+      const c = document.createElement("span");
+      c.className = "connector";
+      c.textContent = "→";
+      row.appendChild(c);
+    }
+  }
+  boardEl.appendChild(row);
+}
+
+// 赤ちゃんボードのスロットを作る (受理: passive かつ hook が maxHpBoost のみ)。
+function createBabySlot(i) {
+  const slot = document.createElement("div");
+  const slotItem = baby.board[i];
+  const pid = slotItem ? slotItem.id : null;
+  const isLocked = !!(slotItem && PEDALS[pid] && PEDALS[pid].locked);
+  slot.className = "slot " + (pid ? "filled" : "empty") + (isLocked ? " blessing-locked" : "");
+
+  if (!isLocked) {
+    slot.addEventListener("dragover", (e) => {
+      const incoming = e.dataTransfer && e.dataTransfer.types.includes("text/plain");
+      if (!incoming) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+      if (pid == null) slot.classList.add("drop-target");
+      else slot.classList.add("drop-reject");
+    });
+    slot.addEventListener("dragleave", () => {
+      slot.classList.remove("drop-target", "drop-reject");
+    });
+    slot.addEventListener("drop", (e) => {
+      e.preventDefault();
+      slot.classList.remove("drop-target", "drop-reject");
+      const uidStr = e.dataTransfer.getData("text/plain");
+      const uid = parseInt(uidStr, 10);
+      if (!isNaN(uid)) placePedalAtBabySlot(i, uid);
+    });
+    slot.addEventListener("click", () => removePedalFromBabySlot(i));
+  }
+
+  const num = document.createElement("span");
+  num.className = "slot-num";
+  num.textContent = String(i + 1);
+  slot.appendChild(num);
+
+  if (pid) {
+    const p = PEDALS[pid];
+    slot.style.borderColor = p.color;
+    slot.style.boxShadow = `inset 0 0 0 1px ${p.color}33`;
+    const icon = document.createElement("div");
+    icon.className = "pedal-icon";
+    icon.style.color = p.color;
+    icon.textContent = p.icon;
+    slot.appendChild(icon);
+    const name = document.createElement("div");
+    name.className = "pedal-name";
+    name.textContent = p.name;
+    slot.appendChild(name);
+    const desc = document.createElement("div");
+    desc.className = "pedal-desc";
+    desc.innerHTML = renderDescWithRed(p.desc, p.red, p.red);
+    slot.appendChild(desc);
+    attachTooltip(slot, p, p.red, p.red);
+  } else {
+    const emptyLabel = document.createElement("div");
+    emptyLabel.className = "slot-empty-label";
+    emptyLabel.textContent = "(空き)";
+    slot.appendChild(emptyLabel);
+    slot.title = `赤ちゃんスロット${i+1}: HP/防御系 passive をドラッグで装着`;
+  }
+  return slot;
+}
+
+// 赤ちゃんボードへのペダル装着 (passive maxHpBoost のみ受理)
+function placePedalAtBabySlot(slotIdx, uid) {
+  if (!baby) return false;
+  if (slotIdx < 0 || slotIdx >= BABY_BOARD_SIZE) return false;
+  if (baby.board[slotIdx] != null) {
+    log("そのスロットは埋まってる (外しはピットで)");
+    return false;
+  }
+  const item = findInInventory(uid);
+  if (!item || item.kind !== "pedal") return false;
+  const p = PEDALS[item.id];
+  if (!p || p.kind !== "passive" || p.hook !== "maxHpBoost") {
+    log("👶 赤ちゃんには HP/防御系 (Body 等) しか装着できない", "lose");
+    return false;
+  }
+  removeFromInventoryByUid(uid);
+  baby.board[slotIdx] = item;
+  log(`${p.name} を [BABY] スロット${slotIdx + 1} に装着`, "pickup");
+  recomputeBabyHpMax();
+  renderAll();
+  return true;
+}
+
+function removePedalFromBabySlot(slotIdx) {
+  if (!baby) return;
+  if (!isOnPit()) {
+    log("⚔ FIELD では編集不可。ピット (P) に戻って");
+    return;
+  }
+  if (slotIdx < 0 || slotIdx >= BABY_BOARD_SIZE) return;
+  const item = baby.board[slotIdx];
+  if (!item) return;
+  if (PEDALS[item.id] && PEDALS[item.id].locked) {
+    log("✟ 加護は外せない", "lose");
+    return;
+  }
+  if (inventory.length >= INV_MAX) {
+    log(`インベントリ満杯 (${INV_MAX})、外せない`, "lose");
+    return;
+  }
+  baby.board[slotIdx] = null;
+  inventory.push(item);
+  log(`👶 ${PEDALS[item.id].name} を取り外した`, "");
+  recomputeBabyHpMax();
+  renderAll();
 }
 
 function renderBoard() {
@@ -3193,6 +3910,8 @@ function renderBoard() {
 
     boardEl.appendChild(row);
   }
+  // 赤ちゃん取得済みなら 4 行目として赤ちゃんボードを描画
+  if (baby) renderBabyBoard();
 }
 
 function createSlot(boardKey, i, item) {
@@ -3728,8 +4447,26 @@ function tryMove(dx, dy) {
   }
   const nx = player.x + dx;
   const ny = player.y + dy;
+  // NPC マス: 隣接で会話開始済みなので進めない (壁判定)
+  if (npcAt(nx, ny)) return false;
+  // 赤ちゃんマスへの移動 → 位置入れ替え (ピット崩しは通常通り)
+  if (baby && baby.x === nx && baby.y === ny) {
+    const oldKey = `${player.x},${player.y}`;
+    const wasOnPit = pits.has(oldKey);
+    const px = player.x, py = player.y;
+    player.x = nx; player.y = ny;
+    baby.x = px;   baby.y = py;
+    if (wasOnPit) {
+      pits.delete(oldKey);
+      log("🕳 ピットが崩れた (使い捨て)", "info");
+    }
+    tryPickup();
+    applyOnStepPassives();
+    return true;
+  }
   if (isBlocked(nx, ny)) return false;
   const oldKey = `${player.x},${player.y}`;
+  const oldX = player.x, oldY = player.y;
   const wasOnPit = pits.has(oldKey);
   player.x = nx;
   player.y = ny;
@@ -3738,6 +4475,8 @@ function tryMove(dx, dy) {
     pits.delete(oldKey);
     log("🕳 ピットが崩れた (使い捨て)", "info");
   }
+  // 赤ちゃんの追従 (旧プレイヤー位置に詰める)
+  doBabyFollow(oldX, oldY);
   tryPickup();
   applyOnStepPassives();
   return true;
@@ -4258,10 +4997,14 @@ function isCellBlockedForEnemy(self, x, y) {
   // ピットは聖域ではなくなった: 敵が侵入&追撃可能
   if (goal.x === x && goal.y === y) return true; // ゴールはプレイヤー専用
   if (x === player.x && y === player.y) return true; // プレイヤーマスは攻撃対象
+  if (baby && baby.hp > 0 && baby.x === x && baby.y === y) return true; // 赤ちゃんマスも攻撃対象
   for (const o of enemies) {
     if (o === self) continue;
     if (o.hp <= 0) continue;
     if (o.x === x && o.y === y) return true;
+  }
+  for (const n of npcs) {
+    if (n.x === x && n.y === y) return true; // NPC は不可侵
   }
   return false;
 }
@@ -4293,6 +5036,22 @@ function enemyAttackPlayer(enemy) {
   } else {
     log(`敵に殴られた！ -${dmg}`, "attack");
   }
+}
+
+// 敵が赤ちゃんを攻撃。加護があれば最終ダメ=1 にクランプ。
+function enemyAttackBaby(enemy) {
+  if (!baby || baby.hp <= 0) return;
+  let dmg = enemy.atk != null ? enemy.atk : ENEMY_ATK;
+  if (enemy.rage) dmg *= 2;
+  // 加護: 物理ダメは 1 に上限
+  if (hasBlessing()) dmg = 1;
+  const ldx = Math.sign(baby.x - enemy.x);
+  const ldy = Math.sign(baby.y - enemy.y);
+  spawnLungeFx(enemy.x, enemy.y, ldx, ldy);
+  pulse(mapEl, "shake", 200);
+  // damageBaby で floating + hurt fx + 死亡時バブル + バブル制御まで処理
+  damageBaby(dmg, "physical");
+  if (baby) log(`👶 赤ちゃんが殴られた！ -${dmg}`, "attack");
 }
 
 // アーチャー: 4 方向直線・3 マスまで・壁/他敵で止まる
@@ -4400,11 +5159,29 @@ function crankGrab(enemy, dir, dist) {
 
 // 戻り値: "attacked" | "moved" | "skipped"
 //   "attacked" のみが「意味あるイベント」として拍を刻む対象
+//
+// ターゲット選択: プレイヤー / 赤ちゃんのうちマンハッタン距離が近い方。
+//   同距離なら 50% でランダム選択 (赤ちゃんに偏らないように)。
+//   赤ちゃんが死亡/未取得ならプレイヤー固定。
+function pickEnemyTarget(enemy) {
+  const pdist = Math.abs(player.x - enemy.x) + Math.abs(player.y - enemy.y);
+  if (!baby || baby.hp <= 0) {
+    return { x: player.x, y: player.y, kind: "player", dist: pdist };
+  }
+  const bdist = Math.abs(baby.x - enemy.x) + Math.abs(baby.y - enemy.y);
+  if (bdist < pdist) return { x: baby.x, y: baby.y, kind: "baby", dist: bdist };
+  if (pdist < bdist) return { x: player.x, y: player.y, kind: "player", dist: pdist };
+  return Math.random() < 0.5
+    ? { x: baby.x, y: baby.y, kind: "baby", dist: bdist }
+    : { x: player.x, y: player.y, kind: "player", dist: pdist };
+}
+
 function enemyAct(enemy) {
   if (enemy.status.some((s) => s.type === "freeze" || s.type === "shock")) {
     return "skipped";
   }
   // クランクブリッツ: グラブ視線が通れば優先 (引き寄せて削る)
+  // (赤ちゃんは射程に入れない — 既存 tryCrankGrab はプレイヤー専用ロジックのため改修不要)
   if (enemy.abilities && enemy.abilities.includes("rocket-grab-5")) {
     if (tryCrankGrab(enemy)) return "attacked";
     // 撃てなければ近接 AI で接近
@@ -4415,12 +5192,15 @@ function enemyAct(enemy) {
     if (tryArcherShoot(enemy)) return "attacked";
     // 撃てなければ通常移動 (greedy) — 射線を取り直すために寄る
   }
-  const dx = player.x - enemy.x;
-  const dy = player.y - enemy.y;
+
+  const target = pickEnemyTarget(enemy);
+  const dx = target.x - enemy.x;
+  const dy = target.y - enemy.y;
   const dist = Math.abs(dx) + Math.abs(dy);
 
   if (dist === 1) {
-    enemyAttackPlayer(enemy);
+    if (target.kind === "baby") enemyAttackBaby(enemy);
+    else                        enemyAttackPlayer(enemy);
     return "attacked";
   }
   if (dist > ENEMY_ALERT_RANGE) return "skipped";
@@ -4565,6 +5345,7 @@ function spawnArrowFx(fromX, fromY, dir, dist) {
 
 async function performAction(actionFn) {
   if (gameOver || inputLocked) return;
+  if (activeDialog) return; // ダイアログ中はクリックで進める (キーは別ハンドラ)
   inputLocked = true;
   try {
     const consumed = await actionFn();
@@ -4574,6 +5355,10 @@ async function performAction(actionFn) {
       await tickRagePaced(); // 怒り残ターン減算は敵行動「後」
       turn++;
       checkWin();
+      // 赤ちゃんの定期発話 (クールダウンあり)
+      if (baby && baby.hp > 0) babySaySpeech();
+      // NPC 隣接で会話発火
+      checkNpcAdjacency();
     }
   } finally {
     renderAll();
@@ -4584,6 +5369,12 @@ async function performAction(actionFn) {
 function checkWin() {
   if (player.x === goal.x && player.y === goal.y && !gameOver) {
     log(`★ ${currentFloor.name} クリア！`, "win");
+    // 10F (idx 9) ゴール: 母の鍵が無ければラン完遂 (赤ちゃん死亡時 or 7F イベント未消化)。
+    // 鍵あり → 11F (idx 10) へ進む。
+    if (currentFloorIdx === 9 && !motherKey) {
+      showRunClear();
+      return;
+    }
     if (currentFloorIdx + 1 >= FLOORS.length) {
       // 最終フロア突破
       showRunClear();
@@ -4639,6 +5430,14 @@ function rotateFacing(dx, dy) {
 
 document.addEventListener("keydown", (e) => {
   if (gameOver) return;
+  // NPC ダイアログ中: Space / Enter / クリック相当キーで台詞送り。他キーは無効。
+  if (activeDialog) {
+    if (e.key === " " || e.key === "Enter") {
+      advanceNpcDialog();
+      e.preventDefault();
+    }
+    return;
+  }
   switch (e.key) {
     case "ArrowUp":
       if (pendingAttack) rotateFacing(0, -1);
@@ -4663,7 +5462,11 @@ document.addEventListener("keydown", (e) => {
       if (pendingAttack) { pendingAttack = null; renderAll(); }
       break;
     case "1": case "2": case "3": case "4":
-      removePedalFromSlot(activeBoard, parseInt(e.key, 10) - 1);
+      if (activeBoard === "b") {
+        removePedalFromBabySlot(parseInt(e.key, 10) - 1);
+      } else {
+        removePedalFromSlot(activeBoard, parseInt(e.key, 10) - 1);
+      }
       e.preventDefault();
       break;
     case "d": case "D": {
@@ -4706,7 +5509,8 @@ if (_ctrlEl) {
 // 凡例を新ペダル仕様に書き換え (index.html は触らず JS で上書き)
 const _legendEl = document.getElementById("legend");
 if (_legendEl) {
-  const legendItems = Object.values(PEDALS).map((p) => {
+  // 加護 (baby-locked) は通常凡例から除外 (7F イベントで初対面の時に名乗らせたい)
+  const legendItems = Object.values(PEDALS).filter((p) => p.kind !== "baby-locked").map((p) => {
     const descHtml = renderDescWithRed(p.desc, p.red, p.red);
     return (
       `<span class="legend-item" style="display:inline-block;margin:2px 6px;">` +

@@ -168,6 +168,18 @@ const PEDALS = {
     red: 50, color: "#44aa66", icon: "▩",
     hook: "maxHpBoost",
   },
+
+  // ===== Baby-locked: 騎士の最期の加護 =====
+  // 赤ちゃんボードのスロット 0 に固定で刺さっている特殊ペダル。
+  // kind:"baby-locked" は resolveChain / computeChainItems の分岐に乗らないため
+  // チェーン解決には影響しない (item は items[] に push されるが apply されない)。
+  // 効果は main.js 側で「赤ちゃんが敵物理攻撃で受けるダメージを 1 にクランプ」として実装。
+  // インベントリ / 通常ドロップには絶対に出ない (GLOBAL_DROP_POOL から除外)。
+  knightsblessing: {
+    id: "knightsblessing", kind: "baby-locked",
+    red: 1, color: "#ffd866", icon: "✟",
+    locked: true,
+  },
 };
 
 // TEXTS から name / desc / detail をマージ (texts.js を先に読み込む前提)
