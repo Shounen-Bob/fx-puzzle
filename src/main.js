@@ -927,6 +927,41 @@
     /* 死亡時バブルは長め */
     .baby-speech-bubble.die { animation-duration: 2400ms; }
 
+    /* 母の吹き出し: 落ち着いた色味、左下から矢印 */
+    .mother-speech-bubble {
+      position: absolute;
+      z-index: 70;
+      padding: 5px 11px;
+      background: linear-gradient(180deg, #f0e6d6, #d8c8b0);
+      color: #4a3520;
+      font-family: ui-monospace, "Menlo", monospace;
+      font-size: 12px;
+      font-weight: bold;
+      border: 1.5px solid #88663a;
+      border-radius: 12px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.45);
+      pointer-events: none;
+      animation: baby-bubble-pop 2400ms ease-out forwards;
+      white-space: nowrap;
+    }
+    .mother-speech-bubble::after {
+      content: "";
+      position: absolute;
+      bottom: -6px;
+      left: 14px;
+      border-style: solid;
+      border-width: 6px 6px 0 0;
+      border-color: #d8c8b0 transparent transparent transparent;
+    }
+    /* 喜びモードの赤ちゃんバブル: ほっこり色 */
+    .baby-speech-bubble.joy {
+      color: #aa3366;
+      background: linear-gradient(180deg, #fff0f8, #ffd0e0);
+      border-color: #cc5588;
+      animation-duration: 2400ms;
+    }
+    .baby-speech-bubble.joy::after { border-top-color: #ffd0e0; }
+
     /* ===== NPC ダイアログ ===== */
     #npc-dialog {
       position: fixed;
@@ -1982,6 +2017,8 @@ let baby = null;
 let babyAcquired = false;
 let motherKey = false;
 let activeDialog = null;       // { npcType, lines, idx, onComplete } | null
+let babyWithMother = false;    // 母に渡した後: 赤ちゃんは母の隣に固定 / 無敵 / 喜び続ける
+let joyTimerId = null;         // 喜びバブルの繰り返し用 setInterval ハンドル
 const BABY_BOARD_SIZE = 3;
 
 // 武器・ペダル固有のランタイム状態 (doAttack を跨いで保持)
@@ -2713,6 +2750,13 @@ function loadFloor(idx) {
     return;
   }
   const isFirst = idx === 0;
+  // 母に赤ちゃんを渡した後にフロアを跨いだ瞬間 → 赤ちゃんと母は 10F に残る
+  // (実体は破棄、喜び timer も停止)
+  if (babyWithMother) {
+    stopJoyTimer();
+    baby = null;
+    babyWithMother = false;
+  }
   currentFloorIdx = idx;
   currentFloor = FLOORS[idx];
   parseMap();
@@ -3315,6 +3359,8 @@ function placeBabyNearPlayer() {
 // プレイヤーの旧位置に追従。塞がってたら待機。
 function doBabyFollow(oldPlayerX, oldPlayerY) {
   if (!baby) return;
+  // 母に渡した後は追従しない (母の隣で固定)
+  if (babyWithMother) return;
   // すでにプレイヤー隣接なら動かない (チラつき抑制)
   const adj = Math.abs(baby.x - player.x) + Math.abs(baby.y - player.y);
   if (adj <= 1) return;
@@ -3373,6 +3419,13 @@ function startNpcDialog(npc) {
       motherKey = true;
       npc.completed = true;
       log("🗝 母から 11F 以降の鍵を受け取った! ゴール (G) で次の階層へ", "win");
+      // 赤ちゃんを母の隣に渡す: 以後は無敵 + 喜び続け、プレイヤーには追従しない
+      if (baby) {
+        babyWithMother = true;
+        baby.hp = baby.hpMax;
+        placeBabyAtNpc(npc);
+      }
+      startJoyTimer();
       renderAll();
     };
   } else {
@@ -3440,6 +3493,8 @@ function hasBlessing() {
 
 function damageBaby(rawDmg, source) {
   if (!baby) return;
+  // 母に渡したあとは完全無敵 (まだ画面に居るが触れない聖域状態)
+  if (babyWithMother) return;
   let dmg = rawDmg;
   if (source === "physical" && hasBlessing()) dmg = 1;
   baby.hp -= dmg;
@@ -3490,6 +3545,8 @@ function showBabyBubble(text, klass) {
 function babySaySpeech() {
   if (!baby) return;
   if (turn - baby.lastBubbleTurn < BABY_BUBBLE_COOLDOWN_TURNS) return;
+  // 母に渡した後はターンベース発話は止める (喜び timer が担当)
+  if (babyWithMother) return;
   const ratio = baby.hp / baby.hpMax;
   let text, klass = "";
   if (ratio >= 0.999) {
@@ -3505,6 +3562,79 @@ function babySaySpeech() {
   }
   baby.lastBubbleTurn = turn;
   showBabyBubble(text, klass);
+}
+
+// ===== 母のバブル / 喜びタイマー =====
+function showMotherBubble(text) {
+  const mom = npcs.find((n) => n.type === "mother");
+  if (!mom) return;
+  const t = tileAt(mom.x, mom.y);
+  if (!t) return;
+  const old = document.getElementById("mother-speech-bubble-active");
+  if (old) old.remove();
+  const bubble = document.createElement("div");
+  bubble.id = "mother-speech-bubble-active";
+  bubble.className = "mother-speech-bubble";
+  bubble.textContent = text;
+  document.body.appendChild(bubble);
+  const rect = t.getBoundingClientRect();
+  bubble.style.left = `${rect.left + window.scrollX - 4}px`;
+  bubble.style.top  = `${rect.top + window.scrollY - 28}px`;
+  setTimeout(() => bubble.remove(), 2400);
+}
+
+const BABY_JOY_LINES = [
+  "きゃっきゃっきゃっきゃ",
+  "あぱぱぱ！",
+  "ばぶばぶー！",
+  "きゃっきゃっ！",
+  "うきゃー！",
+];
+const MOTHER_JOY_LINES = [
+  "母「ああ……よかった……」",
+  "母「うちの子……うちの子……」",
+  "母「もう離さないわ」",
+  "母「ありがとう……本当に」",
+  "母「いい子いい子……」",
+];
+
+function startJoyTimer() {
+  if (joyTimerId != null) return;
+  let tick = 0;
+  joyTimerId = setInterval(() => {
+    if (!babyWithMother) { stopJoyTimer(); return; }
+    if (gameOver || activeDialog) return; // ダイアログ表示中は被らない
+    // 交互に: 偶数 tick = 赤ちゃん、奇数 = 母
+    if (tick % 2 === 0) {
+      const line = BABY_JOY_LINES[Math.floor(Math.random() * BABY_JOY_LINES.length)];
+      showBabyBubble(line, "joy");
+    } else {
+      const line = MOTHER_JOY_LINES[Math.floor(Math.random() * MOTHER_JOY_LINES.length)];
+      showMotherBubble(line);
+    }
+    tick++;
+  }, 1400);
+}
+
+function stopJoyTimer() {
+  if (joyTimerId != null) {
+    clearInterval(joyTimerId);
+    joyTimerId = null;
+  }
+  document.getElementById("baby-speech-bubble-active")?.remove();
+  document.getElementById("mother-speech-bubble-active")?.remove();
+}
+
+// 母 NPC の隣に赤ちゃんを再配置 (渡した瞬間に呼ぶ)。
+function placeBabyAtNpc(npc) {
+  if (!baby) return;
+  const ring4 = [[1,0],[-1,0],[0,1],[0,-1]];
+  const ring8 = [[1,1],[-1,1],[1,-1],[-1,-1]];
+  for (const [dx, dy] of [...ring4, ...ring8]) {
+    const x = npc.x + dx, y = npc.y + dy;
+    if (isCellFreeForBaby(x, y, true)) { baby.x = x; baby.y = y; baby.facing = { dx: -dx, dy: -dy }; return; }
+  }
+  // フォールバック: そのまま
 }
 
 // ========================================================================
@@ -4449,8 +4579,10 @@ function tryMove(dx, dy) {
   const ny = player.y + dy;
   // NPC マス: 隣接で会話開始済みなので進めない (壁判定)
   if (npcAt(nx, ny)) return false;
-  // 赤ちゃんマスへの移動 → 位置入れ替え (ピット崩しは通常通り)
+  // 赤ちゃんマスへの移動: 母に渡した後は赤ちゃんが壁 (動かさない)、
+  // それ以外は位置入れ替え (ピット崩しは通常通り)
   if (baby && baby.x === nx && baby.y === ny) {
+    if (babyWithMother) return false;
     const oldKey = `${player.x},${player.y}`;
     const wasOnPit = pits.has(oldKey);
     const px = player.x, py = player.y;
@@ -5165,7 +5297,8 @@ function crankGrab(enemy, dir, dist) {
 //   赤ちゃんが死亡/未取得ならプレイヤー固定。
 function pickEnemyTarget(enemy) {
   const pdist = Math.abs(player.x - enemy.x) + Math.abs(player.y - enemy.y);
-  if (!baby || baby.hp <= 0) {
+  // 母に渡した後の赤ちゃんは聖域 (ターゲットに含めない)
+  if (!baby || baby.hp <= 0 || babyWithMother) {
     return { x: player.x, y: player.y, kind: "player", dist: pdist };
   }
   const bdist = Math.abs(baby.x - enemy.x) + Math.abs(baby.y - enemy.y);
