@@ -113,21 +113,77 @@
     .tile.enemy.enemy-samurai > .char-svg {
       animation: samurai-stance 1.4s ease-in-out infinite;
     }
-    /* パリィ中: 金色のオーラ + 刀構えポーズ */
+    /* ===== パリィ状態: 全身に金色の霞 + シマー + 揺れる残像 =====
+       タイル本体: 強いパルスオーラ
+       SVG: 残像のように上下に揺れる + 強い drop-shadow + 軽いブラー
+       ::before: 揺れる金色の霞オーバーレイ (screen ブレンドで光が滲む)
+       ::after: 右上の 🛡 マーカー */
     @keyframes samurai-parry-aura {
-      0%, 100% { box-shadow: inset 0 0 10px rgba(255,216,102,0.55), 0 0 8px rgba(255,216,102,0.5); }
-      50%      { box-shadow: inset 0 0 18px rgba(255,216,102,0.95), 0 0 20px rgba(255,216,102,1.0); }
+      0%, 100% {
+        box-shadow:
+          inset 0 0 12px rgba(255,216,102,0.65),
+          0 0 14px rgba(255,216,102,0.55),
+          0 0 22px rgba(255,180,80,0.4);
+      }
+      50% {
+        box-shadow:
+          inset 0 0 22px rgba(255,216,102,1.0),
+          0 0 26px rgba(255,216,102,1.0),
+          0 0 40px rgba(255,180,80,0.85);
+      }
+    }
+    @keyframes samurai-parry-shimmer {
+      0%, 100% {
+        transform: translateY(0);
+        filter: drop-shadow(0 0 6px rgba(255,216,102,0.95))
+                drop-shadow(0 0 12px rgba(255,180,80,0.75))
+                blur(0.3px);
+      }
+      50% {
+        transform: translateY(-1px);
+        filter: drop-shadow(0 0 14px rgba(255,216,102,1.0))
+                drop-shadow(0 0 24px rgba(255,180,80,0.95))
+                blur(0.55px);
+      }
+    }
+    @keyframes samurai-parry-haze {
+      0%   { transform: translate(-2px, 0)  scale(1.0); opacity: 0.55; }
+      25%  { transform: translate( 1px,-1px) scale(1.05); opacity: 0.9; }
+      50%  { transform: translate( 3px, 1px) scale(1.0); opacity: 0.75; }
+      75%  { transform: translate(-1px, 2px) scale(1.08); opacity: 0.95; }
+      100% { transform: translate(-2px, 0)  scale(1.0); opacity: 0.55; }
     }
     .tile.enemy.enemy-samurai.parry-stance {
       animation: samurai-parry-aura 700ms ease-in-out infinite;
+      overflow: visible;
+      z-index: 3;
+    }
+    .tile.enemy.enemy-samurai.parry-stance > .char-svg {
+      animation: samurai-parry-shimmer 900ms ease-in-out infinite;
+    }
+    .tile.enemy.enemy-samurai.parry-stance::before {
+      content: "";
+      position: absolute;
+      inset: -6px;
+      pointer-events: none;
+      z-index: 2;
+      background:
+        radial-gradient(ellipse at 30% 30%, rgba(255,255,255,0.55), transparent 55%),
+        radial-gradient(ellipse at 70% 60%, rgba(255,216,102,0.85), transparent 60%),
+        radial-gradient(ellipse at 50% 80%, rgba(255,150,60,0.55),  transparent 70%);
+      mix-blend-mode: screen;
+      filter: blur(3px);
+      border-radius: 50%;
+      animation: samurai-parry-haze 1.4s ease-in-out infinite;
     }
     .tile.enemy.enemy-samurai.parry-stance::after {
       content: "🛡";
-      position: absolute; top: -2px; right: -2px;
-      font-size: 12px; line-height: 1;
-      text-shadow: 0 0 6px #ffd866;
+      position: absolute; top: -3px; right: -3px;
+      font-size: 13px; line-height: 1;
+      text-shadow: 0 0 8px #ffd866, 0 0 14px #ff9a40;
       pointer-events: none;
-      z-index: 2;
+      z-index: 4;
+      animation: samurai-parry-aura 700ms ease-in-out infinite;
     }
     /* パリィ表示 */
     .floating-damage.parry {
@@ -4381,7 +4437,6 @@ function renderMap() {
     t._npc = n;
   }
   // 赤ちゃん描画 (敵 / NPC より後、プレイヤーより前)
-  // HP バーは描画しない (発話バブルが状態を伝える役割)
   if (baby && baby.hp > 0) {
     const t = tileAt(baby.x, baby.y);
     if (t) {
@@ -4391,6 +4446,17 @@ function renderMap() {
       if (goal.x === baby.x && goal.y === baby.y) t.classList.add("on-goal-bg");
       t.innerHTML = babySvg();
       t._baby = baby;
+      // HP ミニバー (ピンク系、敵と同じ位置/スタイル)
+      const ratio = Math.max(0, baby.hp / baby.hpMax);
+      const bar = document.createElement("div");
+      bar.className = "tile-hp-bar";
+      const fill = document.createElement("div");
+      fill.className = "tile-hp-fill tile-hp-fill-baby";
+      if (ratio < 0.2)      fill.classList.add("bad");
+      else if (ratio < 0.5) fill.classList.add("warn");
+      fill.style.width = `${(ratio * 100).toFixed(1)}%`;
+      bar.appendChild(fill);
+      t.appendChild(bar);
     }
   }
   const pt = tileAt(player.x, player.y);
@@ -4456,8 +4522,10 @@ function renderHud() {
     `HP ${player.hp}/${player.hpMax}` +
     `<span class="hp-bar-wrap"><span class="hp-bar-fill" style="width:${(ratio * 100).toFixed(0)}%"></span></span>`;
   if (baby) {
-    // 赤ちゃんは HP 値/バーを出さず、👶 アイコンで「同行中」だけ示す
-    inner += `<span style="margin-left:14px;color:#ff88bb" title="赤ちゃん同行中">👶</span>`;
+    const br = Math.max(0, baby.hp / baby.hpMax);
+    inner +=
+      `<span style="margin-left:14px;color:#ff88bb">👶 ${baby.hp}/${baby.hpMax}</span>` +
+      `<span class="hp-bar-wrap" style="width:60px"><span class="hp-bar-fill" style="width:${(br*100).toFixed(0)}%;background:#ff88bb"></span></span>`;
   }
   if (motherKey) inner += `<span style="margin-left:10px;color:#ffd866">🗝 鍵</span>`;
   hpEl.innerHTML = inner;
