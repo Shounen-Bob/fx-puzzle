@@ -121,18 +121,18 @@ const TEXTS = {
 
     body: {
       name: "Body",
-      desc: "最大HP +{red}",
-      detail: "装着中、最大HP を 赤字 増やす (現在HP も同量増加)。",
+      desc: "最大HP +10",
+      detail: "装着中、最大HP を +10 する (現在HP も同量増加)。固定値で modifier の影響は受けない。",
     },
     cabsim: {
       name: "Cab Sim",
-      desc: "最大HP +{red}",
-      detail: "装着中、最大HP を 赤字 増やす (現在HP も同量増加)。",
+      desc: "最大HP +30",
+      detail: "装着中、最大HP を +30 する (現在HP も同量増加)。固定値で modifier の影響は受けない。",
     },
     subwoofer: {
       name: "Subwoofer",
-      desc: "最大HP +{red}",
-      detail: "装着中、最大HP を 赤字 増やす (現在HP も同量増加)。",
+      desc: "最大HP +50",
+      detail: "装着中、最大HP を +50 する (現在HP も同量増加)。固定値で modifier の影響は受けない。",
     },
 
     knightsblessing: {

@@ -2288,13 +2288,16 @@ document.body.appendChild(pedalTooltip);
 function showPedalTooltip(p, originalRed, effectiveRed, anchorEl) {
   const boosted = effectiveRed !== originalRed;
   const summary = renderDescWithRed(p.desc, originalRed, effectiveRed);
-  const redInfo = boosted
-    ? `赤字: <span class="red-val boosted"><span class="red-orig">${originalRed}</span>${effectiveRed}</span>` +
-      ` <span style="opacity:0.6">(Booster で倍化中)</span>`
-    : `赤字: <span class="red-val">${originalRed}</span>`;
+  // noRed フラグ付きペダル (HP 増強系等) は赤字行を出さず固定値として扱う
+  const redLine = p.noRed
+    ? `<span style="color:#888">固定値 (modifier の影響なし)</span>`
+    : (boosted
+        ? `赤字: <span class="red-val boosted"><span class="red-orig">${originalRed}</span>${effectiveRed}</span>` +
+          ` <span style="opacity:0.6">(Booster で倍化中)</span>`
+        : `赤字: <span class="red-val">${originalRed}</span>`);
   pedalTooltip.innerHTML =
     `<div class="tt-title" style="color:${p.color}">${p.icon} ${p.name}</div>` +
-    `<div class="tt-summary">${redInfo}<br>${summary}</div>` +
+    `<div class="tt-summary">${redLine}<br>${summary}</div>` +
     `<div class="tt-detail">${escapeHtml(p.detail || "")}</div>`;
   pedalTooltip.style.display = "block";
   positionTooltipNear(anchorEl);

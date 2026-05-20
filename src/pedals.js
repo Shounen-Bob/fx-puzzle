@@ -153,20 +153,22 @@ const PEDALS = {
   // 装着している間、player.baseHpMax に red をオン (装着で player.hp も同量増える)。
   // 同じ ID を複数装備すれば加算 (board[].forEach でユニーク数えではなく実装ぶん集計)。
   // modifier の対象外 (boostable: 未指定 → false)。
+  // HP 増加系: 固定値で、赤字 (modifier 倍化対象) ではない。
+  // red を「最大HP 増加量」として保持しつつ noRed フラグで UI から赤字表現を消す。
   body: {
     id: "body", kind: "passive",
     red: 10, color: "#88dd66", icon: "♬",
-    hook: "maxHpBoost",
+    hook: "maxHpBoost", noRed: true,
   },
   cabsim: {
     id: "cabsim", kind: "passive",
     red: 30, color: "#66bb88", icon: "▥",
-    hook: "maxHpBoost",
+    hook: "maxHpBoost", noRed: true,
   },
   subwoofer: {
     id: "subwoofer", kind: "passive",
     red: 50, color: "#44aa66", icon: "▩",
-    hook: "maxHpBoost",
+    hook: "maxHpBoost", noRed: true,
   },
 
   // ===== Baby-locked: 騎士の最期の加護 =====
