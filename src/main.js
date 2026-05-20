@@ -4061,19 +4061,66 @@ function placeBabyNearPlayer() {
 }
 
 // プレイヤーの旧位置に追従。塞がってたら待機。
+// プレイヤーが移動した瞬間に呼ばれる「自然な追従」処理。
+//   赤ちゃんがプレイヤーの旧位置に隣接していたらそこへ詰める (一歩の自然なフォロー)。
+//   旧位置が赤ちゃんから遠い (= 何らかの理由で引き離されている) ケースでは
+//   ここでは動かさず、ターン終端の babyTurnStep に任せる (= 1T かけて 1 マス追う)。
 function doBabyFollow(oldPlayerX, oldPlayerY) {
   if (!baby) return;
-  // 母に渡した後は追従しない (母の隣で固定)
   if (babyWithMother) return;
-  // すでにプレイヤー隣接なら動かない (チラつき抑制)
   const adj = Math.abs(baby.x - player.x) + Math.abs(baby.y - player.y);
   if (adj <= 1) return;
-  if (isCellFreeForBaby(oldPlayerX, oldPlayerY, true)) {
-    // 赤ちゃんの向きをプレイヤー側に
+  // 自然なフォロー条件: 旧プレイヤー位置が赤ちゃんに隣接していて空いている
+  const adjOld = Math.abs(baby.x - oldPlayerX) + Math.abs(baby.y - oldPlayerY);
+  if (adjOld === 1 && isCellFreeForBaby(oldPlayerX, oldPlayerY, true)) {
     baby.facing = { dx: Math.sign(player.x - baby.x), dy: Math.sign(player.y - baby.y) };
     baby.x = oldPlayerX;
     baby.y = oldPlayerY;
   }
+  // 引き離されている場合はここでは動かない (ワープ防止)。
+}
+
+// 1 マスだけプレイヤーへ向けて貪欲ステップ。動けたら true。
+function babyGreedyStep() {
+  if (!baby) return false;
+  const dx = player.x - baby.x;
+  const dy = player.y - baby.y;
+  const sx = Math.sign(dx);
+  const sy = Math.sign(dy);
+  const preferX = Math.abs(dx) >= Math.abs(dy);
+  const tryStep = (mx, my) => {
+    if (mx === 0 && my === 0) return false;
+    const nx = baby.x + mx;
+    const ny = baby.y + my;
+    if (!isCellFreeForBaby(nx, ny, true)) return false;
+    baby.facing = { dx: mx, dy: my };
+    baby.x = nx;
+    baby.y = ny;
+    return true;
+  };
+  if (preferX) {
+    if (tryStep(sx, 0)) return true;
+    if (tryStep(0, sy)) return true;
+  } else {
+    if (tryStep(0, sy)) return true;
+    if (tryStep(sx, 0)) return true;
+  }
+  return false;
+}
+
+// 1 ターンが終わるごとに呼ばれる赤ちゃんターン処理。
+//   プレイヤーと 2 マス以上離れていれば 1 マスだけ近づく (瞬間移動はしない)。
+//   人面樹の根 (root-bind) が隣接している場合は動けず、その 1T を消費するだけ。
+function babyTurnStep() {
+  if (!baby || baby.hp <= 0) return;
+  if (babyWithMother) return;
+  const dist = Math.abs(player.x - baby.x) + Math.abs(player.y - baby.y);
+  if (dist <= 1) return;
+  if (adjacentRootBinder(baby.x, baby.y)) {
+    log(`👶🪢 赤ちゃんが根に縛られて動けない…`, "lose");
+    return;
+  }
+  babyGreedyStep();
 }
 
 function npcAt(x, y) {
@@ -6737,6 +6784,9 @@ async function performAction(actionFn) {
       await tickStatusesPaced();
       if (!gameOver) await enemiesActPaced();
       await tickRagePaced(); // 怒り残ターン減算は敵行動「後」
+      // 赤ちゃんの 1 マスステップ AI: プレイヤーから 2 マス以上離れていれば 1 マスだけ近づく
+      // (CrankBlitz 等で引き離されたケースで瞬間移動せず、毎ターン徒歩で追う)
+      babyTurnStep();
       turn++;
       checkWin();
       // 赤ちゃんの定期発話 (クールダウンあり)
