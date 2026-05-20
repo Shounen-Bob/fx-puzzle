@@ -197,6 +197,31 @@
       font-size: 17px;
       text-shadow: 0 0 8px #7ed957, 0 0 12px #44aa66, 0 0 2px #000;
     }
+    /* Shimmer パリィ表示 */
+    .floating-damage.shimmer-parry {
+      color: #d4b8ff;
+      font-size: 16px;
+      text-shadow: 0 0 8px #c8aaff, 0 0 14px #8866dd, 0 0 2px #000;
+    }
+    /* Shimmer 発動時の全身シマー (タイル全体に淡い紫の波紋) */
+    @keyframes shimmer-burst {
+      0%   { opacity: 0; transform: scale(0.6); }
+      30%  { opacity: 1; transform: scale(1.15); }
+      100% { opacity: 0; transform: scale(1.8); }
+    }
+    .shimmer-fx {
+      position: absolute;
+      width: var(--tile-size, 32px);
+      height: var(--tile-size, 32px);
+      background: radial-gradient(circle,
+        rgba(200,170,255,0.85) 0%,
+        rgba(150,110,220,0.55) 45%,
+        rgba(120,80,180,0) 80%);
+      pointer-events: none;
+      z-index: 9;
+      mix-blend-mode: screen;
+      animation: shimmer-burst 520ms ease-out forwards;
+    }
 
     /* ===== 土遁エフェクト (人面樹) ===== */
     @keyframes burrow-fx {
@@ -5753,6 +5778,9 @@ async function doAttack(attackKey) {
           if (playerInvincible) {
             showGodFx(player.x, player.y);
             log(`🛡 GOD: ${enemyDisplayName(enemy)} の棘 (-${counter} → 0)`, "info");
+          } else if (rollShimmerParry()) {
+            showShimmerFx(player.x, player.y);
+            log(`✦ Shimmer: ${enemyDisplayName(enemy)} の棘を弾いた! (-${counter} → 0)`, "win");
           } else {
             player.hp -= counter;
             showFloatingDamage(player.x, player.y, counter, "");
@@ -5896,6 +5924,11 @@ function enemyAttackPlayer(enemy) {
     log(`🛡 GOD: 敵の攻撃 (-${dmg} → 0)`, "info");
     return;
   }
+  if (rollShimmerParry()) {
+    showShimmerFx(player.x, player.y);
+    log(`✦ Shimmer: ${enemyDisplayName(enemy)} の攻撃を弾いた! (-${dmg} → 0)`, "win");
+    return;
+  }
 
   player.hp -= dmg;
   showFloatingDamage(player.x, player.y, dmg, "");
@@ -5965,6 +5998,11 @@ function archerShoot(archer, dir, dist) {
     log(`🛡 GOD: ${enemyDisplayName(archer)} の矢 (-${dmg} → 0)`, "info");
     return;
   }
+  if (rollShimmerParry()) {
+    showShimmerFx(player.x, player.y);
+    log(`✦ Shimmer: ${enemyDisplayName(archer)} の矢を弾いた! (-${dmg} → 0)`, "win");
+    return;
+  }
   player.hp -= dmg;
   showFloatingDamage(player.x, player.y, dmg, "");
   spawnHurtFx(player.x, player.y);
@@ -6014,6 +6052,10 @@ function crankGrab(enemy, dir, dist) {
     showGodFx(player.x, player.y);
     log(`🛡 GOD: ${enemyDisplayName(enemy)} のロケットグラブ (-${dmg} → 0) / 引き寄せ`, "info");
     // 引き寄せ移動は続行 (ダメだけ無効、強制移動は性質上残す)
+  } else if (rollShimmerParry()) {
+    showShimmerFx(player.x, player.y);
+    log(`✦ Shimmer: ${enemyDisplayName(enemy)} のロケットグラブを弾いた! (-${dmg} → 0) / 引き寄せ`, "win");
+    // 引き寄せだけ続行 (ダメ無効)
   } else {
     player.hp -= dmg;
     showFloatingDamage(player.x, player.y, dmg, "");
@@ -6251,6 +6293,62 @@ function showGodFx(tileX, tileY) {
   el.style.top  = `${t.offsetTop + 4}px`;
   mapEl.appendChild(el);
   setTimeout(() => el.remove(), 760);
+}
+
+// Shimmer (確率パリィ) 発動時の演出: 紫の波紋 + 浮き文字
+function showShimmerFx(tileX, tileY) {
+  const t = tileAt(tileX, tileY);
+  if (!t) return;
+  // 紫の波紋オーバーレイ
+  const o = document.createElement("div");
+  o.className = "shimmer-fx";
+  o.style.left = `${t.offsetLeft}px`;
+  o.style.top  = `${t.offsetTop}px`;
+  mapEl.appendChild(o);
+  setTimeout(() => o.remove(), 540);
+  // 浮き文字
+  const el = document.createElement("div");
+  el.className = "floating-damage shimmer-parry";
+  el.textContent = "SHIMMER!";
+  el.style.left = `${t.offsetLeft + t.offsetWidth / 2}px`;
+  el.style.top  = `${t.offsetTop + 4}px`;
+  mapEl.appendChild(el);
+  setTimeout(() => el.remove(), 760);
+}
+
+// 装備中 Shimmer の解決後 red を合算 (modifier 効果を含む)。
+// Q/W/E は武器ありの場合は computeChainItems を通して boost 後 red を取得。
+// 武器なしのボードや BABY ボードは modifier 不可なので素の red をそのまま加算。
+function computeShimmerRedTotal() {
+  let total = 0;
+  for (const key of ["q", "w", "e"]) {
+    const slots = getSlotPedalIds(key);
+    const weaponId = weapons[key];
+    if (weaponId && WEAPONS[weaponId]) {
+      const items = computeChainItems(WEAPONS[weaponId], slots);
+      for (const it of items) {
+        if (it.pedal && it.pedal.id === "shimmer") total += it.red;
+      }
+    } else {
+      for (const id of slots) {
+        if (id === "shimmer") total += PEDALS.shimmer.red || 0;
+      }
+    }
+  }
+  if (baby && !babyWithMother) {
+    for (const it of baby.board) {
+      if (it && it.id === "shimmer") total += PEDALS.shimmer.red || 0;
+    }
+  }
+  return total;
+}
+
+// 被弾直前に呼び出し、true ならパリィ成立 (ダメージ無効化)。
+function rollShimmerParry() {
+  const totalRed = computeShimmerRedTotal();
+  if (totalRed <= 0) return false;
+  const chance = Math.min(1, 0.05 * totalRed);
+  return Math.random() < chance;
 }
 
 // パリィ表示 (PARRY! の浮き文字)

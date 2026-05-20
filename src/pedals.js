@@ -171,6 +171,17 @@ const PEDALS = {
     hook: "maxHpBoost", noRed: true,
   },
 
+  // ===== Passive: Shimmer (確率パリィ) =====
+  // 敵の攻撃を受ける度、5% × red の確率で攻撃を完全に弾く。
+  // boostable:true なので Booster / Stack 等で赤字を増やすと確率上昇。
+  // hook:"shimmerParry" は main.js 側でダメージ計算前にチェック。
+  shimmer: {
+    id: "shimmer", kind: "passive",
+    red: 1, color: "#c8aaff", icon: "✦",
+    hook: "shimmerParry",
+    boostable: true,
+  },
+
   // ===== Baby-locked: 騎士の最期の加護 =====
   // 赤ちゃんボードのスロット 0 に固定で刺さっている特殊ペダル。
   // kind:"baby-locked" は resolveChain / computeChainItems の分岐に乗らないため

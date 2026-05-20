@@ -135,6 +135,12 @@ const TEXTS = {
       detail: "装着中、最大HP を +50 する (現在HP も同量増加)。固定値で modifier の影響は受けない。",
     },
 
+    shimmer: {
+      name: "Shimmer",
+      desc: "敵の攻撃を 5%×{red} で無効化",
+      detail: "敵の攻撃 (近接 / 矢 / グラブ / 棘反射) を受ける度に 5%×赤字 の確率でパリィ (完全無効化)。赤字 1 → 5%、赤字 2 → 10% など。modifier (Booster 等) で赤字を盛れば確率が上がる。複数装備時は赤字を合算。",
+    },
+
     knightsblessing: {
       name: "騎士の最期の加護",
       desc: "敵の物理攻撃を 1 ダメに変換",
