@@ -197,11 +197,11 @@
       font-size: 17px;
       text-shadow: 0 0 8px #7ed957, 0 0 12px #44aa66, 0 0 2px #000;
     }
-    /* 能力赤字デバフ表示 (Limiter / NoiseGate) */
+    /* 能力赤字デバフ表示 (Limiter / NoiseGate) — 赤字を削る演出なので赤系 */
     .floating-damage.red-debuff {
-      color: #88c0e0;
+      color: #ff4d4d;
       font-size: 14px;
-      text-shadow: 0 0 6px #88c0e0, 0 0 10px #4488aa, 0 0 2px #000;
+      text-shadow: 0 0 6px #ff4d4d, 0 0 10px #aa3333, 0 0 2px #000;
     }
     /* Shimmer パリィ表示 */
     .floating-damage.shimmer-parry {
@@ -3066,11 +3066,12 @@ function enemyAbilitiesInfo(e) {
     if (id === "death-rage" && e.rage) {
       label = `怒り状態 残${e.rage.turnsLeft}T (ATK×2 / 無敵)`;
     }
-    // {key} プレースホルダを enemy.reds から置換し、青く強調 (Limiter で削れる赤字)
+    // {key} プレースホルダを enemy.reds から置換し、ゲーム共通の「赤字」色で強調
+    // (ペダル側の .red-val と同じ #ff4d4d 系で、Limiter / NoiseGate で削れることを示す)
     label = label.replace(/\{(\w+)\}/g, (m, k) => {
       const v = e.reds && e.reds[k] != null ? e.reds[k] : null;
       if (v === null) return m;
-      return `<b style="color:#88c0e0;text-shadow:0 0 4px rgba(136,192,224,0.55)">${v}</b>`;
+      return `<b style="color:#ff4d4d;text-shadow:0 0 4px rgba(255,80,80,0.5)">${v}</b>`;
     });
     // アイコンだけアビリティ色、本文はニュートラル色で読みやすく
     return `<span style="color:#d4d4d4;line-height:1.55">` +
