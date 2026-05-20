@@ -1714,9 +1714,11 @@ const WEAPONS = {
   },
   sustainer: {
     id: "sustainer", icon: "∿",
-    damage:  4, damageRed: true,  shape: "single",
-    color: "#aaffaa",
-    effect: "sustain",
+    damage:  4, damageRed: false,
+    hits:    2, hitsRed:   true,
+    shape:   "single",
+    color:   "#aaffaa",
+    effect:  "sustain",  // 同一対象への連続ヒットで +25%/回 累積 (固定値)
   },
   tripletter: {
     id: "tripletter", icon: "彡",
@@ -2348,7 +2350,7 @@ function getShapeLabel(shape, range) {
 
 function weaponEffectText(src) {
   switch (src.effect) {
-    case "sustain":  return "同一対象に連続ヒットで +10%/回 累積 (別対象でリセット)";
+    case "sustain":  return "同一対象に連続ヒットで +25%/回 累積 (固定値、別対象でリセット)";
     case "compress": return "各ヒットで対象の最大HP × 武器の赤字% を追加ダメージ";
     case "pushback": return "敵を「武器の赤字」マスぶんノックバック (壁/敵で止まる)";
     case "lofi":     return "装備ペダルのうち赤字 ≤ 2 のものは効果が ×3";
@@ -2357,10 +2359,11 @@ function weaponEffectText(src) {
 }
 
 function showWeaponTooltip(src, weaponItem, slotIds, anchorEl) {
-  // 武器の「赤字」は damage / range / compress のいずれか (なし=damage 固定)
-  const rangeRed   = !!src.rangeRed;
+  // 武器の「赤字」は damage / range / compress / hits のいずれか (なし=damage 固定)
+  const rangeRed    = !!src.rangeRed;
   const compressRed = !!src.compressRed;
-  const damageRed  = !!src.damageRed;
+  const damageRed   = !!src.damageRed;
+  const hitsRed     = !!src.hitsRed;
 
   // --- ダメージ行 ---
   const baseDmg = src.damage;
@@ -2407,6 +2410,21 @@ function showWeaponTooltip(src, weaponItem, slotIds, anchorEl) {
       `<span style="opacity:0.7">(modifier で増減可)</span></div>`;
   }
 
+  // --- 攻撃回数行 (hitsRed のときだけ表示) ---
+  let hitsLine = "";
+  if (hitsRed) {
+    const baseH = src.hits || 0;
+    const finalH = weaponItem ? weaponItem.red : baseH;
+    const hBoosted = finalH !== baseH;
+    const hVal = hBoosted
+      ? `<span class="weapon-dmg-red">${baseH}</span> <span style="opacity:0.6">→</span> ` +
+        `<span class="weapon-dmg-red" style="text-shadow:0 0 6px #ff5566">${finalH}</span>`
+      : `<span class="weapon-dmg-red">${baseH}</span>`;
+    hitsLine = `<div style="margin-top:4px">攻撃回数: ${hVal} 回 ` +
+      `<span style="color:#ff8888;font-weight:bold">赤字</span> ` +
+      `<span style="opacity:0.7">(modifier で増減可)</span></div>`;
+  }
+
   // --- 形状行 ---
   // beam は range が動的なので、解決後の値があれば優先表示
   const rangeForShape = (rangeRed && weaponItem) ? weaponItem.red : src.range;
@@ -2424,7 +2442,7 @@ function showWeaponTooltip(src, weaponItem, slotIds, anchorEl) {
 
   pedalTooltip.innerHTML =
     `<div class="tt-title" style="color:${src.color}">${src.icon} ${src.name}</div>` +
-    `<div class="tt-summary">${dmgLine}${rangeLine}${compressLine}${shapeLine}</div>` +
+    `<div class="tt-summary">${dmgLine}${rangeLine}${compressLine}${hitsLine}${shapeLine}</div>` +
     `<div class="tt-detail">${escapeHtml(src.desc || "")}</div>` +
     effectRow +
     resolvedSection;
@@ -5170,12 +5188,12 @@ async function doAttack(attackKey) {
       let dmgF = atk.damage * elemMult;
 
       // === 武器エフェクト: per-hit ===
-      // サスティナー: 同一対象連続ヒットで +10%/回 累積
+      // サスティナー: 同一対象連続ヒットで +25%/回 累積 (固定値、modifier 不可)
       if (src.effect === "sustain") {
         const ss = weaponState.sustainer;
         if (ss.lastEnemy === enemy) ss.streak += 1;
         else { ss.lastEnemy = enemy; ss.streak = 1; }
-        dmgF *= 1 + 0.1 * (ss.streak - 1);
+        dmgF *= 1 + 0.25 * (ss.streak - 1);
       }
       // トリプレッター: スイング単位 3回ごとに会心 (この swing 全体 ×2)
       if (critThisSwing) {

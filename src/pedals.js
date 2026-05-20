@@ -233,10 +233,11 @@ function makeBaseAttack(source) {
 function computeChainItems(source, slots) {
   const items = [];
 
-  // 仮想 weapon item: 赤字 = 素ダメ / 射程 / 追加ダメ% のいずれか1つ (武器ごと固定)
+  // 仮想 weapon item: 赤字 = 素ダメ / 射程 / 追加ダメ% / 攻撃回数 のいずれか1つ (武器ごと固定)
   //   damageRed:true   → red = damage   (modifier でダメージ増減)
   //   rangeRed:true    → red = range    (modifier で射程増減、damage は固定の黒字)
   //   compressRed:true → red = compress (modifier で追加ダメ%増減、damage は固定の黒字)
+  //   hitsRed:true     → red = hits     (modifier で攻撃回数増減、damage は固定の黒字)
   //   どれも false      → red = damage   (固定値、modifier で変えられない)
   let redKind = "damage";
   let redValue = source.damage || 0;
@@ -246,13 +247,16 @@ function computeChainItems(source, slots) {
   } else if (source.compressRed) {
     redKind = "compress";
     redValue = source.compress || 0;
+  } else if (source.hitsRed) {
+    redKind = "hits";
+    redValue = source.hits || 0;
   }
   items.push({
     kind: "weapon",
     pedal: null,
     red: redValue,
     originalRed: redValue,
-    redBoostable: !!source.damageRed || !!source.rangeRed || !!source.compressRed,
+    redBoostable: !!source.damageRed || !!source.rangeRed || !!source.compressRed || !!source.hitsRed,
     redKind: redKind,
     slotIndex: -1,
   });
@@ -322,6 +326,10 @@ function resolveChain(source, slots) {
         // 追加ダメ%武器 (例: コンプレッサー): damage は固定、red は対象最大HPに対する%
         atk.damage   = source.damage || 0;
         atk.compress = Math.max(0, it.red);
+      } else if (it.redKind === "hits") {
+        // 攻撃回数武器 (例: サスティナー): damage は固定、red は同対象への連続ヒット回数
+        atk.damage = source.damage || 0;
+        atk.hits   = Math.max(1, it.red);
       } else {
         atk.damage = it.red;
       }
