@@ -177,9 +177,9 @@
       animation: samurai-parry-haze 1.4s ease-in-out infinite;
     }
     .tile.enemy.enemy-samurai.parry-stance::after {
-      content: "🛡";
-      position: absolute; top: -3px; right: -3px;
-      font-size: 13px; line-height: 1;
+      content: "✨";
+      position: absolute; top: -4px; right: -4px;
+      font-size: 14px; line-height: 1;
       text-shadow: 0 0 8px #ffd866, 0 0 14px #ff9a40;
       pointer-events: none;
       z-index: 4;
