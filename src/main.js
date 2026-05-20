@@ -5856,6 +5856,10 @@ async function doAttack(attackKey) {
   // 1 ヒット目 4 / 2 ヒット目 8 / 3 ヒット目 16 ... と指数で反射が伸びる。
   // 攻撃が変わると (新しい doAttack) リセット。
   const stormHits = new Map();
+  // 能力赤字デバフ (Limiter / NoiseGate): 1 回の攻撃で同じ敵には 1 度しか適用しない。
+  // 多段ヒットで重複しないように Set で追跡する。
+  //   → ペダル赤字 N で対象の能力赤字を一律 -N (例: 3T 怒りを 0 にするには赤字 3 必要)。
+  const debuffedThisAttack = new Set();
 
   for (let h = 0; h < atk.hits; h++) {
     if (h > 0) {
@@ -5992,8 +5996,11 @@ async function doAttack(attackKey) {
 
       // === 特殊能力デバフ (Limiter / NoiseGate): 敵の能力 red を atk.redDebuff ぶん削る ===
       // 対象は enemy.reds (現状: rage=怒りT数 / quadStrike=連撃数 など)。
-      // 各 red を一律に -atk.redDebuff (下限 0)。複数 red がある敵は全て影響を受ける。
-      if (dmg > 0 && atk.redDebuff > 0 && enemy.hp > 0 && enemy.reds) {
+      // 1 攻撃中に同じ敵には 1 度しか適用しない (多段ヒットで重複しない)。
+      //   → ペダル赤字 N で能力赤字を 1:1 で -N (3T 怒りを 0 にしたければ赤字 3 必要)。
+      if (dmg > 0 && atk.redDebuff > 0 && enemy.hp > 0 && enemy.reds &&
+          !debuffedThisAttack.has(enemy)) {
+        debuffedThisAttack.add(enemy);
         const changes = [];
         for (const k of Object.keys(enemy.reds)) {
           const before = enemy.reds[k];
