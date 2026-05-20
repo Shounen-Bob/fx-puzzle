@@ -6343,22 +6343,21 @@ function showShimmerFx(tileX, tileY) {
 }
 
 // 装備中 Shimmer の解決後 red を合算 (modifier 効果を含む)。
-// Q/W/E は武器ありの場合は computeChainItems を通して boost 後 red を取得。
-// 武器なしのボードや BABY ボードは modifier 不可なので素の red をそのまま加算。
+// Q/W/E は武器の有無に関わらず常に computeChainItems を通す:
+//   武器が無いボードは「ダメ 0 の仮想 source」でチェーン解決し、
+//   左隣の modifier (Booster/Overdrive/PowerStack/Lift/Push/Trim/Cut) を Shimmer に適用する。
+// BABY ボードは現状 modifier ペダルを受理しないため (Shimmer 自体も passive 経由で
+// 拒否される) 素の red を加算するだけで十分。
 function computeShimmerRedTotal() {
   let total = 0;
+  const FAKE_SRC = { damage: 0 };
   for (const key of ["q", "w", "e"]) {
     const slots = getSlotPedalIds(key);
     const weaponId = weapons[key];
-    if (weaponId && WEAPONS[weaponId]) {
-      const items = computeChainItems(WEAPONS[weaponId], slots);
-      for (const it of items) {
-        if (it.pedal && it.pedal.id === "shimmer") total += it.red;
-      }
-    } else {
-      for (const id of slots) {
-        if (id === "shimmer") total += PEDALS.shimmer.red || 0;
-      }
+    const src = (weaponId && WEAPONS[weaponId]) ? WEAPONS[weaponId] : FAKE_SRC;
+    const items = computeChainItems(src, slots);
+    for (const it of items) {
+      if (it.pedal && it.pedal.id === "shimmer") total += it.red;
     }
   }
   if (baby && !babyWithMother) {
