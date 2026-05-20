@@ -962,25 +962,43 @@
     }
     .baby-speech-bubble.joy::after { border-top-color: #ffd0e0; }
 
-    /* ===== NPC ダイアログ ===== */
+    /* ===== NPC ダイアログ (画面中央 + 暗転バックドロップ) ===== */
+    #npc-dialog-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(1.5px);
+      z-index: 2999;
+      cursor: pointer;
+      animation: backdrop-fade-in 200ms ease-out;
+    }
+    @keyframes backdrop-fade-in {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
     #npc-dialog {
       position: fixed;
       left: 50%;
-      bottom: 18%;
-      transform: translateX(-50%);
-      min-width: 360px;
-      max-width: 520px;
-      padding: 16px 22px;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      min-width: 420px;
+      max-width: 600px;
+      padding: 22px 28px 18px;
       background: linear-gradient(180deg, #1a1820, #0f0d14);
       color: #f0e6d6;
       border: 2px solid #c9a531;
-      border-radius: 10px;
+      border-radius: 12px;
       font-family: ui-monospace, "Menlo", monospace;
-      font-size: 15px;
-      line-height: 1.6;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+      font-size: 16px;
+      line-height: 1.7;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.85), 0 0 30px rgba(201,165,49,0.25);
       z-index: 3000;
       cursor: pointer;
+      animation: dialog-pop-in 220ms cubic-bezier(0.2, 1, 0.4, 1);
+    }
+    @keyframes dialog-pop-in {
+      from { transform: translate(-50%, -45%) scale(0.94); opacity: 0; }
+      to   { transform: translate(-50%, -50%) scale(1.0);   opacity: 1; }
     }
     #npc-dialog .npc-name {
       font-weight: bold;
@@ -2560,6 +2578,47 @@ function showEnemyTooltip(e, anchorEl) {
 }
 
 function hideEnemyTooltip() { enemyTooltip.style.display = "none"; }
+
+// NPC (騎士 / 母) ホバー時の説明
+function showNpcTooltip(n, anchorEl) {
+  let title, color, flavor;
+  if (n.type === "knight") {
+    title = "🛡 瀕死の騎士";
+    color = "#cc8866";
+    flavor = "深手を負った騎士。胸に小さな子を抱いている。最期の力を振り絞って、誰かに加護を託そうとしている――。隣接すると会話。";
+  } else if (n.type === "mother") {
+    title = "💖 母";
+    color = "#ffaacc";
+    flavor = "我が子を失い、ずっと探し続けていた母。あなたが連れてきた赤ちゃんを見れば、奥への扉を開く鍵を渡してくれるかもしれない。隣接で会話。";
+  } else {
+    return;
+  }
+  enemyTooltip.innerHTML =
+    `<div class="et-title" style="color:${color}">${title}</div>` +
+    `<div style="margin-top:4px;color:#d4d4d4;font-style:italic;font-size:11px;line-height:1.5">${escapeHtml(flavor)}</div>`;
+  enemyTooltip.style.display = "block";
+  positionEnemyTooltipNear(anchorEl);
+}
+
+// 赤ちゃんホバー時の説明
+function showBabyTooltip(b, anchorEl) {
+  const blessing = hasBlessing()
+    ? '<div style="color:#ffd866;margin-top:4px">✟ 騎士の最期の加護: 敵物理ダメ → 1</div>'
+    : "";
+  const state = babyWithMother
+    ? '<div style="color:#ff88bb;margin-top:4px">💖 母に抱かれて安心しきっている (聖域)</div>'
+    : `<div style="margin-top:4px;color:#cfcfcf">HP ${b.hp}/${b.hpMax} (UI 非表示、台詞で察してね)</div>`;
+  const flavor = babyWithMother
+    ? "母と再会した小さな命。もう怖いものは何もない。"
+    : "騎士から託された小さな命。状態は喋ってくれる: きゃっきゃっ=元気、ばぶばぶ/たいたい=元気、ぜぇ=半分以下、ひゅー=瀕死。HP 0 で失う。";
+  enemyTooltip.innerHTML =
+    `<div class="et-title" style="color:#ff88bb">👶 赤ちゃん</div>` +
+    `<div style="margin-top:4px;color:#d4d4d4;font-style:italic;font-size:11px;line-height:1.5">${escapeHtml(flavor)}</div>` +
+    state +
+    blessing;
+  enemyTooltip.style.display = "block";
+  positionEnemyTooltipNear(anchorEl);
+}
 function positionEnemyTooltipNear(anchorEl) {
   if (!anchorEl) return;
   const r = anchorEl.getBoundingClientRect();
@@ -2834,11 +2893,13 @@ function setupGrid() {
     // renderMap が tile._enemy にセットした参照だけを見て表示するので、
     // 各 tile につきリスナは1セットだけ (renderMap で都度 attach するとスタックする)
     div.addEventListener("mouseenter", () => {
-      if (div._enemy) showEnemyTooltip(div._enemy, div);
+      if (div._enemy)      showEnemyTooltip(div._enemy, div);
+      else if (div._npc)   showNpcTooltip(div._npc, div);
+      else if (div._baby)  showBabyTooltip(div._baby, div);
     });
     div.addEventListener("mouseleave", hideEnemyTooltip);
     div.addEventListener("mousemove", () => {
-      if (div._enemy) positionEnemyTooltipNear(div);
+      if (div._enemy || div._npc || div._baby) positionEnemyTooltipNear(div);
     });
     mapEl.appendChild(div);
   }
@@ -3419,10 +3480,12 @@ function startNpcDialog(npc) {
       motherKey = true;
       npc.completed = true;
       log("🗝 母から 11F 以降の鍵を受け取った! ゴール (G) で次の階層へ", "win");
-      // 赤ちゃんを母の隣に渡す: 以後は無敵 + 喜び続け、プレイヤーには追従しない
+      // 赤ちゃんを母の隣に渡す: 以後は無敵 + 喜び続け、プレイヤーには追従しない。
+      // 装着していたペダル (HP/防御系) は赤ちゃんと共に母に渡る = インベントリに戻らず喪失。
       if (baby) {
         babyWithMother = true;
         baby.hp = baby.hpMax;
+        baby.board = [null, null, null];
         placeBabyAtNpc(npc);
       }
       startJoyTimer();
@@ -3442,6 +3505,7 @@ function advanceNpcDialog() {
     const cb = activeDialog.onComplete;
     activeDialog = null;
     document.getElementById("npc-dialog")?.remove();
+    document.getElementById("npc-dialog-backdrop")?.remove();
     if (cb) cb();
     return;
   }
@@ -3451,13 +3515,22 @@ function advanceNpcDialog() {
 function renderNpcDialog() {
   if (!activeDialog) {
     document.getElementById("npc-dialog")?.remove();
+    document.getElementById("npc-dialog-backdrop")?.remove();
     return;
+  }
+  // 暗転バックドロップ (クリックで台詞送り)
+  let backdrop = document.getElementById("npc-dialog-backdrop");
+  if (!backdrop) {
+    backdrop = document.createElement("div");
+    backdrop.id = "npc-dialog-backdrop";
+    backdrop.addEventListener("click", advanceNpcDialog);
+    document.body.appendChild(backdrop);
   }
   let el = document.getElementById("npc-dialog");
   if (!el) {
     el = document.createElement("div");
     el.id = "npc-dialog";
-    el.addEventListener("click", advanceNpcDialog);
+    el.addEventListener("click", (e) => { e.stopPropagation(); advanceNpcDialog(); });
     document.body.appendChild(el);
   }
   const name = activeDialog.npcType === "knight" ? "瀕死の騎士"
@@ -3650,6 +3723,8 @@ function renderMap() {
       t.style.boxShadow = "";
       t.style.removeProperty("--pedal-color");
       t._enemy = null; // 敵ループで再セット
+      t._npc   = null;
+      t._baby  = null;
       if (walls.has(key)) {
         t.className = "tile wall";
         t.textContent = "#";
@@ -3735,8 +3810,10 @@ function renderMap() {
       t.className = "tile npc-mother";
       t.innerHTML = motherSvg();
     }
+    t._npc = n;
   }
   // 赤ちゃん描画 (敵 / NPC より後、プレイヤーより前)
+  // HP バーは描画しない (発話バブルが状態を伝える役割)
   if (baby && baby.hp > 0) {
     const t = tileAt(baby.x, baby.y);
     if (t) {
@@ -3745,17 +3822,7 @@ function renderMap() {
       if (pits.has(bkey)) t.classList.add("on-pit-bg");
       if (goal.x === baby.x && goal.y === baby.y) t.classList.add("on-goal-bg");
       t.innerHTML = babySvg();
-      // HP ミニバー
-      const ratio = Math.max(0, baby.hp / baby.hpMax);
-      const bar = document.createElement("div");
-      bar.className = "tile-hp-bar";
-      const fill = document.createElement("div");
-      fill.className = "tile-hp-fill tile-hp-fill-baby";
-      if (ratio < 0.2)      fill.classList.add("bad");
-      else if (ratio < 0.5) fill.classList.add("warn");
-      fill.style.width = `${(ratio * 100).toFixed(1)}%`;
-      bar.appendChild(fill);
-      t.appendChild(bar);
+      t._baby = baby;
     }
   }
   const pt = tileAt(player.x, player.y);
@@ -3821,10 +3888,8 @@ function renderHud() {
     `HP ${player.hp}/${player.hpMax}` +
     `<span class="hp-bar-wrap"><span class="hp-bar-fill" style="width:${(ratio * 100).toFixed(0)}%"></span></span>`;
   if (baby) {
-    const br = Math.max(0, baby.hp / baby.hpMax);
-    inner +=
-      `<span style="margin-left:14px;color:#ff88bb">👶 ${baby.hp}/${baby.hpMax}</span>` +
-      `<span class="hp-bar-wrap" style="width:60px"><span class="hp-bar-fill" style="width:${(br*100).toFixed(0)}%;background:#ff88bb"></span></span>`;
+    // 赤ちゃんは HP 値/バーを出さず、👶 アイコンで「同行中」だけ示す
+    inner += `<span style="margin-left:14px;color:#ff88bb" title="赤ちゃん同行中">👶</span>`;
   }
   if (motherKey) inner += `<span style="margin-left:10px;color:#ffd866">🗝 鍵</span>`;
   hpEl.innerHTML = inner;
@@ -4040,8 +4105,13 @@ function renderBoard() {
 
     boardEl.appendChild(row);
   }
-  // 赤ちゃん取得済みなら 4 行目として赤ちゃんボードを描画
-  if (baby) renderBabyBoard();
+  // 赤ちゃん取得済みなら 4 行目として赤ちゃんボードを描画。
+  // ただし母に渡した後 (babyWithMother) はボード自体を消す。
+  if (baby && !babyWithMother) renderBabyBoard();
+  else if (babyWithMother && activeBoard === "b") {
+    // 母に渡した瞬間にアクティブだった場合は Q に戻す
+    activeBoard = "q";
+  }
 }
 
 function createSlot(boardKey, i, item) {
