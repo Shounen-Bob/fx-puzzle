@@ -2200,7 +2200,8 @@ const ENEMY_ABILITIES = {
   "hide-aura-3":   { name: "幻惑オーラ 3×3 (周囲の敵を隠す)", kind: "trait", color: "#bb88ff", icon: "👁" },
   "hide-aura-5":   { name: "幻惑オーラ 5×5 (周囲の敵を隠す)", kind: "trait", color: "#dd66ff", icon: "👁" },
   "quad-strike":   { name: "{quadStrike}回攻撃", kind: "trait", color: "#ff77aa", icon: "⚔" },
-  "parry-after-quad": { name: "{quadStrike}回攻撃に成功すると、次のマスターサムライのターンまでパリィ状態になる", kind: "trait", color: "#ffd866", icon: "🛡" },
+  // パリィ側の「4」は静的な発動条件で、ペダルでは操作されない (動的赤字ではない)
+  "parry-after-quad": { name: "4回攻撃に成功すると、次のマスターサムライのターンまでパリィ状態になる", kind: "trait", color: "#ffd866", icon: "🛡" },
   "burrow-emerge-5": { name: "土遁 (5×5 内の対象の隣へ瞬間移動)", kind: "trait", color: "#8aaa66", icon: "🌀" },
 };
 
@@ -6506,10 +6507,11 @@ function enemyAct(enemy) {
 }
 
 // マスター・サムライ: 隣接時に 1 ターンで N 連斬 (N = enemy.reds.quadStrike, 初期 4)。
-//   N ヒット全弾命中で次の自分のターン (= 次のプレイヤーターン) まで「パリィ」を予約。
+//   N は Limiter / NoiseGate で減らせる赤字。減らせば連撃数は減る。
+//   パリィ発動条件は「素の 4 回」を満たした時のみ (= SAMURAI_PARRY_THRESHOLD, 固定値)。
+//   → quadStrike が 4 未満まで削られている時点でパリィは構造上発動できない。
 //   doAttack 内でパリィ判定し、武器ダメージを完全無効化する。
-//   Limiter / NoiseGate で reds.quadStrike が 0 まで削られると、samuraiQuadStrike は呼ばれず
-//   通常 AI (単発メレー) に落ちる。
+const SAMURAI_PARRY_THRESHOLD = 4;
 async function samuraiQuadStrike(samurai) {
   samurai.samuraiHitsThisTurn = 0;
   const maxHits = (samurai.reds && samurai.reds.quadStrike != null) ? samurai.reds.quadStrike : 4;
@@ -6529,10 +6531,10 @@ async function samuraiQuadStrike(samurai) {
     renderEnemyStatus();
     await sleep(180);
   }
-  if (samurai.samuraiHitsThisTurn >= maxHits && samurai.hp > 0) {
+  if (samurai.samuraiHitsThisTurn >= SAMURAI_PARRY_THRESHOLD && samurai.hp > 0) {
     samurai.parryActive = true;
     samurai.parryUntilTurn = turn + 1; // 次のプレイヤーターン (turn++ 後の値) と等価
-    log(`⚔ ${enemyDisplayName(samurai)} ${maxHits}連斬完遂! 次のターンは構え (武器無効)`, "lose");
+    log(`⚔ ${enemyDisplayName(samurai)} 4回攻撃完遂! 次のターンは構え (武器無効)`, "lose");
   }
 }
 
