@@ -135,6 +135,12 @@
       font-size: 17px;
       text-shadow: 0 0 8px #ffd866, 0 0 12px #ff8a4d, 0 0 2px #000;
     }
+    /* 不死モード表示 */
+    .floating-damage.god {
+      color: #7ed957;
+      font-size: 17px;
+      text-shadow: 0 0 8px #7ed957, 0 0 12px #44aa66, 0 0 2px #000;
+    }
 
     /* ===== 土遁エフェクト (人面樹) ===== */
     @keyframes burrow-fx {
@@ -2402,19 +2408,23 @@ inventoryEl.id = "inventory";
 inventoryEl.style.cssText =
   "display:flex; gap:6px; justify-content:center; flex-wrap:wrap;";
 
-// === デバッグ: 全アイテム取得ボタン ===
-// 押した瞬間に INV_MAX を Infinity にして、未所持の全武器・全ペダルを 1 つずつ追加
+// === デバッグ: 全アイテム取得 / モンスター出現 / 不死トグル ===
 // 既定で非表示、D キーでトグル。
+let playerInvincible = false;
+
 const debugBar = document.createElement("div");
 debugBar.style.cssText =
-  "display:none; justify-content:center; margin-top:10px;";
-const debugAllBtn = document.createElement("button");
-debugAllBtn.type = "button";
-debugAllBtn.textContent = "🛠 DEBUG: 全アイテム取得";
-debugAllBtn.style.cssText =
+  "display:none; justify-content:center; gap:6px; flex-wrap:wrap; margin-top:10px;";
+
+const dbgBtnStyle =
   "background:#3a2a40; color:#e0c0ff; border:1px solid #885599; " +
   "padding:4px 10px; border-radius:6px; font-size:11px; " +
   "font-family:ui-monospace,monospace; cursor:pointer;";
+
+const debugAllBtn = document.createElement("button");
+debugAllBtn.type = "button";
+debugAllBtn.textContent = "🛠 全アイテム取得";
+debugAllBtn.style.cssText = dbgBtnStyle;
 debugAllBtn.addEventListener("click", () => {
   INV_MAX = Infinity;
   const has = new Set(inventory.map((it) => it.kind + ":" + it.id));
@@ -2434,7 +2444,112 @@ debugAllBtn.addEventListener("click", () => {
 });
 debugBar.appendChild(debugAllBtn);
 
+// --- モンスター出現セレクタ + 出現ボタン ---
+// プレイヤー隣接の最初の空きマスに 1 体スポーン。
+const DEBUG_MONSTER_LIST = [
+  { type: "neutral", isBoss: false, label: "無属性スライム" },
+  { type: "fire",    isBoss: false, label: "炎スライム" },
+  { type: "ice",     isBoss: false, label: "氷スライム" },
+  { type: "neutral", isBoss: true,  label: "ボス・スライム" },
+  { type: "thorn",   isBoss: false, label: "スパイカ" },
+  { type: "gianturtle", isBoss: false, label: "ジャイアントスパイカ" },
+  { type: "tree",       isBoss: false, label: "人面樹" },
+  { type: "archer",     isBoss: false, label: "アーチャー" },
+  { type: "crankblitz", isBoss: false, label: "クランクブリッツ" },
+  { type: "ogre",       isBoss: false, label: "レイジ・オーガ" },
+  { type: "wraith",     isBoss: false, label: "レイス" },
+  { type: "phantomwraith", isBoss: false, label: "ファントムレイス" },
+  { type: "knight",     isBoss: false, label: "盾の騎士" },
+  { type: "samurai",    isBoss: false, label: "マスター・サムライ" },
+];
+const debugMonsterEl = document.createElement("select");
+debugMonsterEl.style.cssText =
+  "background:#1a1a22;color:#cfcfcf;border:1px solid #6a4aaa;border-radius:4px;" +
+  "font-family:ui-monospace,monospace;font-size:11px;padding:1px 4px;cursor:pointer;outline:none;";
+DEBUG_MONSTER_LIST.forEach((m, i) => {
+  const opt = document.createElement("option");
+  opt.value = String(i);
+  opt.textContent = `🐞 ${m.label}`;
+  debugMonsterEl.appendChild(opt);
+});
+debugBar.appendChild(debugMonsterEl);
+
+const spawnBtn = document.createElement("button");
+spawnBtn.type = "button";
+spawnBtn.textContent = "出現";
+spawnBtn.style.cssText = dbgBtnStyle;
+spawnBtn.addEventListener("click", () => {
+  const idx = parseInt(debugMonsterEl.value, 10) || 0;
+  const def = DEBUG_MONSTER_LIST[idx];
+  if (!def) return;
+  debugSpawnEnemy(def.type, def.isBoss);
+});
+debugBar.appendChild(spawnBtn);
+
+// --- 不死トグル ---
+const godBtn = document.createElement("button");
+godBtn.type = "button";
+function refreshGodBtn() {
+  godBtn.textContent = `🛡 不死: ${playerInvincible ? "ON" : "OFF"}`;
+  godBtn.style.cssText = dbgBtnStyle +
+    (playerInvincible
+      ? "background:#2a3a20;color:#b8e8a0;border-color:#7ed957;"
+      : "");
+}
+refreshGodBtn();
+godBtn.addEventListener("click", () => {
+  playerInvincible = !playerInvincible;
+  refreshGodBtn();
+  log(`🐞 不死モード: ${playerInvincible ? "ON" : "OFF"}`, "info");
+});
+debugBar.appendChild(godBtn);
+
 boardPanel.insertBefore(debugBar, summaryEl);
+
+// プレイヤー隣接の空きマスを探して敵をスポーン (デバッグ用)。
+function debugSpawnEnemy(type, isBoss) {
+  const candidates = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]];
+  let spot = null;
+  for (const [dx, dy] of candidates) {
+    const x = player.x + dx, y = player.y + dy;
+    if (!inBounds(x, y)) continue;
+    if (walls.has(`${x},${y}`)) continue;
+    if (pits.has(`${x},${y}`)) continue;
+    if (goal.x === x && goal.y === y) continue;
+    if (baby && baby.hp > 0 && baby.x === x && baby.y === y) continue;
+    if (npcs.some((n) => n.x === x && n.y === y)) continue;
+    if (enemies.some((e) => e.hp > 0 && e.x === x && e.y === y)) continue;
+    spot = { x, y };
+    break;
+  }
+  if (!spot) {
+    log("🐞 [DEBUG] 隣接マスが全て埋まっている", "lose");
+    return;
+  }
+  const cfg = currentFloor.enemyConfig || {};
+  const defaultEnemy = { hp: 25, atk: 2, dropChance: 0, dropPool: [] };
+  const ec = type === "ogre"          ? OGRE_STATS
+           : type === "wraith"        ? WRAITH_STATS
+           : type === "phantomwraith" ? PHANTOM_WRAITH_STATS
+           : type === "gianturtle"    ? GIANT_TURTLE_STATS
+           : type === "crankblitz"    ? CRANK_BLITZ_STATS
+           : type === "knight"        ? KNIGHT_STATS
+           : type === "samurai"       ? SAMURAI_STATS
+           : (isBoss ? (cfg.boss || defaultEnemy) : (cfg[type] || defaultEnemy));
+  const enemy = {
+    x: spot.x, y: spot.y, type, isBoss,
+    hp: ec.hp, hpMax: ec.hp,
+    atk: ec.atk,
+    dropChance: ec.dropChance || 0,
+    dropPool: ec.dropPool || [],
+    status: [],
+    abilities: defaultAbilitiesFor(type, isBoss),
+  };
+  if (type === "thorn") enemy.counter = ec.counter != null ? ec.counter : 2;
+  enemies.push(enemy);
+  log(`🐞 ${enemyDisplayName(enemy)} を出現 (${spot.x},${spot.y})`, "win");
+  renderAll();
+}
 boardPanel.insertBefore(inventoryTitle, summaryEl);
 boardPanel.insertBefore(inventoryEl, summaryEl);
 
@@ -5567,11 +5682,16 @@ async function doAttack(attackKey) {
           counter = enemy.counter != null ? enemy.counter : 2;
         }
         if (counter > 0) {
-          player.hp -= counter;
-          showFloatingDamage(player.x, player.y, counter, "");
-          spawnHurtFx(player.x, player.y);
-          pulse(hpEl, "hurt", 400);
-          log(`✦ ${enemyDisplayName(enemy)} の棘! -${counter}`, "attack");
+          if (playerInvincible) {
+            showGodFx(player.x, player.y);
+            log(`🛡 GOD: ${enemyDisplayName(enemy)} の棘 (-${counter} → 0)`, "info");
+          } else {
+            player.hp -= counter;
+            showFloatingDamage(player.x, player.y, counter, "");
+            spawnHurtFx(player.x, player.y);
+            pulse(hpEl, "hurt", 400);
+            log(`✦ ${enemyDisplayName(enemy)} の棘! -${counter}`, "attack");
+          }
           if (player.hp <= 0) {
             player.hp = 0;
             gameOver = true;
@@ -5697,13 +5817,20 @@ function enemyAttackPlayer(enemy) {
   let dmg = enemy.atk != null ? enemy.atk : ENEMY_ATK;
   // 怒り状態中は ATK ×2 (death-rage の効果)
   if (enemy.rage) dmg *= 2;
-  player.hp -= dmg;
-  showFloatingDamage(player.x, player.y, dmg, "");
 
   // 敵 lunge: 殴る方向に飛び出す overlay (連発でも独立 DOM なので衝突しない)
   const ldx = Math.sign(player.x - enemy.x);
   const ldy = Math.sign(player.y - enemy.y);
   spawnLungeFx(enemy.x, enemy.y, ldx, ldy);
+
+  if (playerInvincible) {
+    showGodFx(player.x, player.y);
+    log(`🛡 GOD: 敵の攻撃 (-${dmg} → 0)`, "info");
+    return;
+  }
+
+  player.hp -= dmg;
+  showFloatingDamage(player.x, player.y, dmg, "");
 
   // プレイヤー被弾フラッシュ (overlay)
   spawnHurtFx(player.x, player.y);
@@ -5765,6 +5892,11 @@ function tryArcherShoot(archer) {
 function archerShoot(archer, dir, dist) {
   const dmg = archer.atk != null ? archer.atk : ENEMY_ATK;
   spawnArrowFx(archer.x, archer.y, dir, dist);
+  if (playerInvincible) {
+    showGodFx(player.x, player.y);
+    log(`🛡 GOD: ${enemyDisplayName(archer)} の矢 (-${dmg} → 0)`, "info");
+    return;
+  }
   player.hp -= dmg;
   showFloatingDamage(player.x, player.y, dmg, "");
   spawnHurtFx(player.x, player.y);
@@ -5810,17 +5942,23 @@ function crankGrab(enemy, dir, dist) {
   const dmg = enemy.atk != null ? enemy.atk : ENEMY_ATK;
   // フック飛行 → 着弾 → 引き戻し の順で演出
   spawnHookFx(enemy.x, enemy.y, dir, dist);
-  player.hp -= dmg;
-  showFloatingDamage(player.x, player.y, dmg, "");
-  spawnHurtFx(player.x, player.y);
-  pulse(hpEl, "hurt", 400);
-  pulse(mapEl, "shake", 240);
-  if (player.hp <= 0) {
-    player.hp = 0;
-    log(`🪝 グラブに倒れた… -${dmg}`, "lose");
-    gameOver = true;
-    showGameEndBanner("✗ GAME OVER", "#ff5544");
-    return;
+  if (playerInvincible) {
+    showGodFx(player.x, player.y);
+    log(`🛡 GOD: ${enemyDisplayName(enemy)} のロケットグラブ (-${dmg} → 0) / 引き寄せ`, "info");
+    // 引き寄せ移動は続行 (ダメだけ無効、強制移動は性質上残す)
+  } else {
+    player.hp -= dmg;
+    showFloatingDamage(player.x, player.y, dmg, "");
+    spawnHurtFx(player.x, player.y);
+    pulse(hpEl, "hurt", 400);
+    pulse(mapEl, "shake", 240);
+    if (player.hp <= 0) {
+      player.hp = 0;
+      log(`🪝 グラブに倒れた… -${dmg}`, "lose");
+      gameOver = true;
+      showGameEndBanner("✗ GAME OVER", "#ff5544");
+      return;
+    }
   }
   // プレイヤーをクランクブリッツの目の前 (step 1) へ強制移動。
   //   destination = enemy + dir (line check で step 1 は通ること確定)
@@ -6032,6 +6170,19 @@ function pulse(el, className, durationMs) {
   void el.offsetWidth;          // 強制 reflow
   el.classList.add(className);
   setTimeout(() => el.classList.remove(className), durationMs);
+}
+
+// 不死モード時の "GOD!" 浮き文字
+function showGodFx(tileX, tileY) {
+  const t = tileAt(tileX, tileY);
+  if (!t) return;
+  const el = document.createElement("div");
+  el.className = "floating-damage god";
+  el.textContent = "GOD!";
+  el.style.left = `${t.offsetLeft + t.offsetWidth / 2}px`;
+  el.style.top  = `${t.offsetTop + 4}px`;
+  mapEl.appendChild(el);
+  setTimeout(() => el.remove(), 760);
 }
 
 // パリィ表示 (PARRY! の浮き文字)
