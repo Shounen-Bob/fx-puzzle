@@ -51,6 +51,8 @@ const PEDALS = {
   //   赤字 = 同じ敵に必要な累積ヒット数 (デフォ 4)。
   //   凍結時間は固定 4T。
   //   apply は atk.phaserRequired を最小値で集約し、main.js 側の命中処理で実発動。
+  // 装着している間プレイヤー本人は「凍結無効」(氷スライムの凍結爪などを完全無効化)。
+  // main.js 側の playerHasFreezeImmunity() で参照。
   phaser: {
     id: "phaser", kind: "value",
     red: 4, color: "#88ddff", icon: "❄",

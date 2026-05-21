@@ -707,7 +707,8 @@
       animation: none;
       filter: brightness(0.8) saturate(0.5) hue-rotate(160deg);
     }
-    .tile.enemy.frozen::after {
+    .tile.enemy.frozen::after,
+    .tile.player.frozen::after {
       content: '❄';
       position: absolute;
       inset: 0;
@@ -719,6 +720,10 @@
       text-shadow: 0 0 6px #88ddff;
       pointer-events: none;
       animation: frost-shake 1.2s ease-in-out infinite;
+    }
+    .tile.player.frozen .player-body {
+      animation: none;
+      filter: brightness(0.85) saturate(0.6) hue-rotate(160deg);
     }
     @keyframes frost-shake {
       0%, 100% { transform: translate(0, 0) rotate(0); }
@@ -2096,6 +2101,9 @@ const player = {
   // baseHpMax = フロア/恒久的な最大HP。hpMax = baseHpMax + passive HP ペダル合算。
   // recomputePlayerHpMax() がボード状態から動的に hpMax を再計算する。
   facing: { dx: 1, dy: 0 },
+  // status: 敵と同形式 ({ type, turns }[])。現状 type:"freeze" のみ。
+  // performAction が凍結中はプレイヤー操作を空回し、enemiesActPaced 後にデクリメント。
+  status: [],
 };
 
 // 装備中の "maxHpBoost" フック passive ペダル (Body 等) の合計を反映して
@@ -2190,6 +2198,10 @@ const ENEMY_ABILITIES = {
   // パリィ側の「4」は静的な発動条件で、ペダルでは操作されない (動的赤字ではない)
   "parry-after-quad": { name: "4回攻撃に成功すると、次のマスターサムライのターンまでパリィ状態になる", kind: "trait", color: "#ffd866", icon: "🛡" },
   "burrow-emerge-5": { name: "土遁 (5×5 内の対象の隣へ瞬間移動)", kind: "trait", color: "#8aaa66", icon: "🌀" },
+  // 氷スライム: 被弾時に {freezeRed} × 3% でプレイヤーを 2T 凍結。
+  // Limiter / NoiseGate で freezeRed を 0 まで削れば完全無効化。
+  // Phaser を装着していれば確率に関わらず凍結を無効化 (playerHasFreezeImmunity)。
+  "freeze-on-hit": { name: "凍結爪 ({freezeRed} × 3% でプレイヤーを 2T 凍結)", kind: "trait", color: "#88ddff", icon: "❄" },
 };
 
 // enemy.reds キー → 表示名 (tooltip / ログ用)
@@ -2197,6 +2209,7 @@ const ENEMY_ABILITIES = {
 const REDS_LABEL = {
   rage: "怒りT数",
   quadStrike: "連撃数",
+  freezeRed: "凍結確率赤字",
 };
 
 // 敵タイプ → 初期「能力赤字 (reds)」の初期値。
@@ -2204,6 +2217,7 @@ const REDS_LABEL = {
 function defaultRedsFor(type) {
   if (type === "ogre")    return { rage: 3 };
   if (type === "samurai") return { quadStrike: 4 };
+  if (type === "ice")     return { freezeRed: 1 };
   return {};
 }
 
@@ -2213,7 +2227,7 @@ function defaultAbilitiesFor(type, isBoss) {
   if (type === "fire") {
     list.push("weak-ice", "resist-fire", "immune-burn");
   } else if (type === "ice") {
-    list.push("weak-fire", "resist-ice", "immune-freeze");
+    list.push("weak-fire", "resist-ice", "immune-freeze", "freeze-on-hit");
   } else if (type === "thorn") {
     list.push("counter-thorn");
   } else if (type === "gianturtle") {
@@ -4668,6 +4682,8 @@ function renderMap() {
   else if (pits.has(pkey)) pt.classList.add("on-pit-bg");
   // 人面樹に縛られていれば縛りマークを表示
   if (adjacentRootBinder(player.x, player.y)) pt.classList.add("root-bound");
+  // 凍結中なら ❄ オーバーレイ
+  if (isPlayerFrozen()) pt.classList.add("frozen");
   pt.innerHTML = playerSvg(player.facing);
   // --- 向き矢印 (上下左右いずれにも対応する追加 indicator) ---
   const fkey = `${player.facing.dx},${player.facing.dy}`;
@@ -6199,6 +6215,45 @@ function isCellBlockedForEnemy(self, x, y) {
   return false;
 }
 
+// プレイヤーが Phaser を装着している (任意のアクティブボード) → 凍結無効。
+function playerHasFreezeImmunity() {
+  for (const key of activeBoardKeys()) {
+    const b = board[key];
+    if (!b) continue;
+    for (const it of b) {
+      if (it && it.id === "phaser") return true;
+    }
+  }
+  return false;
+}
+
+// プレイヤーに凍結を付与 (既存の凍結が残っていれば長い方を採用)。
+function applyPlayerFreeze(turns) {
+  if (turns <= 0) return;
+  if (playerHasFreezeImmunity()) {
+    log("❄→🛡 Phaser でプレイヤーの凍結を無効化", "win");
+    return;
+  }
+  const existing = player.status.find((s) => s.type === "freeze");
+  if (existing) {
+    existing.turns = Math.max(existing.turns, turns);
+  } else {
+    player.status.push({ type: "freeze", turns });
+  }
+  log(`❄ プレイヤーが凍結! (${turns}T)`, "lose");
+}
+
+function isPlayerFrozen() {
+  return player.status.some((s) => s.type === "freeze" && s.turns > 0);
+}
+
+// プレイヤー状態のターン経過 (敵行動の後に 1 ターン消費)。
+function tickPlayerStatus() {
+  if (!player.status || player.status.length === 0) return;
+  for (const s of player.status) s.turns--;
+  player.status = player.status.filter((s) => s.turns > 0);
+}
+
 // 戻り値: 攻撃が実際に着弾したか (Shimmer/GOD で弾かれた場合は false)。
 //   サムライの 4 連斬パリィ条件などで「成功した攻撃のみ」をカウントするために使用。
 function enemyAttackPlayer(enemy) {
@@ -6239,6 +6294,13 @@ function enemyAttackPlayer(enemy) {
     showGameEndBanner("✗ GAME OVER", "#ff5544");
   } else {
     log(`敵に殴られた！ -${dmg}`, "attack");
+    // 凍結爪: freezeRed × 3% で 2T 凍結 (Phaser 装着で完全無効)
+    if (enemy.abilities && enemy.abilities.includes("freeze-on-hit")) {
+      const red = enemy.reds ? (enemy.reds.freezeRed || 0) : 0;
+      if (red > 0 && Math.random() < 0.03 * red) {
+        applyPlayerFreeze(2);
+      }
+    }
   }
   return true;
 }
@@ -6775,11 +6837,19 @@ async function performAction(actionFn) {
   if (activeDialog) return; // ダイアログ中はクリックで進める (キーは別ハンドラ)
   inputLocked = true;
   try {
-    const consumed = await actionFn();
+    // 凍結中はプレイヤー操作を無視して 1T 空回し (敵ターンは進む)
+    let consumed;
+    if (isPlayerFrozen()) {
+      log("❄ 凍結中: 行動できない", "info");
+      consumed = true;
+    } else {
+      consumed = await actionFn();
+    }
     if (consumed) {
       await tickStatusesPaced();
       if (!gameOver) await enemiesActPaced();
       await tickRagePaced(); // 怒り残ターン減算は敵行動「後」
+      tickPlayerStatus();    // プレイヤー凍結も敵行動「後」に減算
       // 赤ちゃんの 1 マスステップ AI: プレイヤーから 2 マス以上離れていれば 1 マスだけ近づく
       // (CrankBlitz 等で引き離されたケースで瞬間移動せず、毎ターン徒歩で追う)
       babyTurnStep();
