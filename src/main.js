@@ -4879,12 +4879,15 @@ function createBabySlot(i) {
     emptyLabel.className = "slot-empty-label";
     emptyLabel.textContent = "(空き)";
     slot.appendChild(emptyLabel);
-    slot.title = `赤ちゃんスロット${i+1}: HP/防御系 passive をドラッグで装着`;
+    slot.title = `赤ちゃんスロット${i+1}: ペダルをドラッグで装着 (効果が出るのは HP/回復/Shimmer 系)`;
   }
   return slot;
 }
 
-// 赤ちゃんボードへのペダル装着 (passive maxHpBoost のみ受理)
+// 赤ちゃんボードへのペダル装着
+// 実効する hook は maxHpBoost / onStep / shimmerParry のみ (各処理側で filter)。
+// それ以外のペダル (value/modifier/copy/onHit/onAttack/lineselector 等) も装着自体は
+// 許可するが、赤ちゃんは攻撃しないので効果は出ない。baby-locked は通常入手不可。
 function placePedalAtBabySlot(slotIdx, uid) {
   if (!baby) return false;
   if (slotIdx < 0 || slotIdx >= BABY_BOARD_SIZE) return false;
@@ -4895,13 +4898,7 @@ function placePedalAtBabySlot(slotIdx, uid) {
   const item = findInInventory(uid);
   if (!item || item.kind !== "pedal") return false;
   const p = PEDALS[item.id];
-  // 赤ちゃん枠は passive で hook が maxHpBoost / onStep のものを受理
-  // (HP 増強系 + Power Supply 系の回復)
-  const okHook = p && p.kind === "passive" && (p.hook === "maxHpBoost" || p.hook === "onStep");
-  if (!okHook) {
-    log("👶 赤ちゃんには HP/防御 (Body 等) か回復 (Power Supply) のペダルしか装着できない", "lose");
-    return false;
-  }
+  if (!p) return false;
   removeFromInventoryByUid(uid);
   baby.board[slotIdx] = item;
   log(`${p.name} を [BABY] スロット${slotIdx + 1} に装着`, "pickup");
