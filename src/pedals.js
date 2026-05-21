@@ -160,6 +160,9 @@ const PEDALS = {
     id: "powersupply", kind: "passive",
     red: 3, color: "#66ddaa", icon: "⚡",
     hook: "onStep", ratio: 0.03,
+    // 強力すぎるため序盤フロアからは出さない (6F 以降のみドロップ対象)。
+    // currentFloorIdx >= minFloor のフロアでだけプールに含める。
+    minFloor: 5,
   },
 
   // ===== Passive: Triplet Echo =====

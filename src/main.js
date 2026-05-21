@@ -2094,6 +2094,17 @@ function weightedPick(pool) {
   return pool[pool.length - 1];
 }
 
+// 現フロアでドロップ可能な entry だけに絞ったプールを返す。
+// pedal.minFloor が指定されている場合、currentFloorIdx >= minFloor のフロアでのみ含める。
+function availableDropPool() {
+  return GLOBAL_DROP_POOL.filter((e) => {
+    if (e.kind !== "pedal") return true;
+    const p = PEDALS[e.id];
+    if (!p || p.minFloor == null) return true;
+    return currentFloorIdx >= p.minFloor;
+  });
+}
+
 // ===== Soft pity =====
 // ビルドの軸となる「コアペダル」が連続で出ないと進行が詰むため、
 // PITY_THRESHOLD 回連続でコアが落ちなかった場合、次のドロップは
@@ -3344,7 +3355,8 @@ function parseMap() {
   currentFloor._lastVariantIdx = variantIdx; // ログ用
   // pickup pool: グローバルプールから「重複なし」で重み付き抽選。
   // 同フロア内で同じアイテムは出ない。レア (weight 小) は選ばれにくい。
-  const pool = [...GLOBAL_DROP_POOL];
+  // minFloor 未満のフロアでは該当ペダルを除外。
+  const pool = availableDropPool();
   const cfg = currentFloor.enemyConfig || {};
   // フォールバック (フロアに該当 type が無い場合)
   const defaultEnemy = { hp: 25, atk: 2, dropChance: 0, dropPool: [] };
@@ -3471,7 +3483,7 @@ function showRunClear() {
 // コア札 (Booster/Driver/Tremolo) はソフトピティで下振れを救済する。
 function rollDrop(enemy) {
   if (Math.random() >= enemy.dropChance) return;
-  const entry = pickWithPity(GLOBAL_DROP_POOL);
+  const entry = pickWithPity(availableDropPool());
   if (!entry) return;
   pickups.set(`${enemy.x},${enemy.y}`, { kind: entry.kind, id: entry.id });
   const label = entry.kind === "weapon" ? "武器" : "ペダル";
