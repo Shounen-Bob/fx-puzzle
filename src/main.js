@@ -2063,78 +2063,22 @@ const WEAPON_MAP = {
   "8": "lofi",
 };
 
-// グローバル・ドロップ・プール: 全武器 + 全ペダル。
+// グローバル・ドロップ・プール: 全武器 + 全ペダル、一律に等確率で抽選。
 // ?スポット / 敵ドロップともにここから乱択 (フロアごとの pickupPool / dropPool は使用しない)
 // kind:"baby-locked" のペダル (騎士の最期の加護) はドロップ対象から除外する。
-// 各エントリは { kind, id, weight }。weight が大きいほど出現しやすい。
-// ペダル側に rarity を指定すると weight = 1/rarity (例: rarity 5 → 1/5 の出現率)。
+// プロト段階では出現率を操作しない: rarity / minFloor / ソフトピティは導入しない。
 const GLOBAL_DROP_POOL = Object.keys(WEAPONS)
-  .map((id) => ({ kind: "weapon", id, weight: 1 }))
+  .map((id) => ({ kind: "weapon", id }))
   .concat(
     Object.keys(PEDALS)
       .filter((id) => PEDALS[id].kind !== "baby-locked")
-      .map((id) => ({
-        kind: "pedal",
-        id,
-        weight: 1 / (PEDALS[id].rarity || 1),
-      }))
+      .map((id) => ({ kind: "pedal", id }))
   );
 
-// 重み付き 1 件選択。pool 中の各要素 e に対して、確率は e.weight / sumWeight。
-function weightedPick(pool) {
+// プールから 1 件等確率で選択。
+function pickRandom(pool) {
   if (!pool || pool.length === 0) return null;
-  let total = 0;
-  for (const e of pool) total += e.weight || 1;
-  if (total <= 0) return null;
-  let r = Math.random() * total;
-  for (const e of pool) {
-    r -= e.weight || 1;
-    if (r < 0) return e;
-  }
-  return pool[pool.length - 1];
-}
-
-// 現フロアでドロップ可能な entry だけに絞ったプールを返す。
-// pedal.minFloor が指定されている場合、currentFloorIdx >= minFloor のフロアでのみ含める。
-function availableDropPool() {
-  return GLOBAL_DROP_POOL.filter((e) => {
-    if (e.kind !== "pedal") return true;
-    const p = PEDALS[e.id];
-    if (!p || p.minFloor == null) return true;
-    return currentFloorIdx >= p.minFloor;
-  });
-}
-
-// ===== Soft pity =====
-// ビルドの軸となる「コアペダル」が連続で出ないと進行が詰むため、
-// PITY_THRESHOLD 回連続でコアが落ちなかった場合、次のドロップは
-// プール内のコアエントリから確定抽選する (重み付き)。
-// コアが落ちた瞬間に streak はリセット。
-// 武器ドロップは streak をインクリメント (= コア札として扱わない)。
-const CORE_DROP_IDS = new Set(["booster", "driver", "tremolo"]);
-const PITY_THRESHOLD = 4;
-let coreDryStreak = 0;
-
-function isCoreEntry(entry) {
-  return entry && entry.kind === "pedal" && CORE_DROP_IDS.has(entry.id);
-}
-
-// ピティ付き抽選。pool は GLOBAL_DROP_POOL or その複製。
-// 確定発動時にコアが pool に無ければ、通常抽選にフォールバック (streak は据え置き)。
-function pickWithPity(pool) {
-  if (!pool || pool.length === 0) return null;
-  if (coreDryStreak >= PITY_THRESHOLD) {
-    const corePool = pool.filter(isCoreEntry);
-    if (corePool.length > 0) {
-      const entry = weightedPick(corePool);
-      coreDryStreak = 0;
-      return entry;
-    }
-  }
-  const entry = weightedPick(pool);
-  if (isCoreEntry(entry)) coreDryStreak = 0;
-  else coreDryStreak++;
-  return entry;
+  return pool[Math.floor(Math.random() * pool.length)];
 }
 
 // 床落ち時の統一アイコン (拾うまで何かは分からない)
@@ -3353,10 +3297,9 @@ function parseMap() {
   const variantIdx = Math.floor(Math.random() * variants.length);
   const map = variants[variantIdx];
   currentFloor._lastVariantIdx = variantIdx; // ログ用
-  // pickup pool: グローバルプールから「重複なし」で重み付き抽選。
-  // 同フロア内で同じアイテムは出ない。レア (weight 小) は選ばれにくい。
-  // minFloor 未満のフロアでは該当ペダルを除外。
-  const pool = availableDropPool();
+  // pickup pool: グローバルプールから「重複なし」で等確率抽選。
+  // 同フロア内で同じアイテムは出ない。
+  const pool = [...GLOBAL_DROP_POOL];
   const cfg = currentFloor.enemyConfig || {};
   // フォールバック (フロアに該当 type が無い場合)
   const defaultEnemy = { hp: 25, atk: 2, dropChance: 0, dropPool: [] };
@@ -3398,9 +3341,9 @@ function parseMap() {
         if (type === "thorn") enemy.counter = ec.counter != null ? ec.counter : 2;
         enemies.push(enemy);
       } else if (ch === "?") {
-        // ランダム pickup スポット: 重み付き抽選 (重複なし) + コア札ソフトピティ
+        // ランダム pickup スポット: 等確率抽選 (重複なし)
         if (pool.length > 0) {
-          const entry = pickWithPity(pool);
+          const entry = pickRandom(pool);
           if (entry) {
             const idx = pool.indexOf(entry);
             if (idx >= 0) pool.splice(idx, 1);
@@ -3479,11 +3422,10 @@ function showRunClear() {
   showGameEndBanner("★ RUN CLEAR", "#7ed957");
 }
 
-// 敵ドロップ: グローバルプールから重み付き抽選 (dropChance のみ enemy 設定を尊重)
-// コア札 (Booster/Driver/Tremolo) はソフトピティで下振れを救済する。
+// 敵ドロップ: グローバルプールから等確率抽選 (dropChance のみ enemy 設定を尊重)
 function rollDrop(enemy) {
   if (Math.random() >= enemy.dropChance) return;
-  const entry = pickWithPity(availableDropPool());
+  const entry = pickRandom(GLOBAL_DROP_POOL);
   if (!entry) return;
   pickups.set(`${enemy.x},${enemy.y}`, { kind: entry.kind, id: entry.id });
   const label = entry.kind === "weapon" ? "武器" : "ペダル";

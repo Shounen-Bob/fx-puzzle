@@ -33,19 +33,16 @@ const PEDALS = {
   driver: {
     id: "driver", kind: "value",
     red: 2, color: "#ffdd44", icon: "▲",
-    rarity: 2,
     apply(atk, red) { if (red > 0) atk.damage = atk.damage * red; },
   },
   tubedriver: {
     id: "tubedriver", kind: "value",
     red: 3, color: "#ff9944", icon: "◆",
-    rarity: 4,
     apply(atk, red) { if (red > 0) atk.damage = atk.damage * red; },
   },
   badassdriver: {
     id: "badassdriver", kind: "value",
     red: 4, color: "#ff4444", icon: "⬢",
-    rarity: 5,
     apply(atk, red) { if (red > 0) atk.damage = atk.damage * red; },
   },
 
@@ -57,7 +54,6 @@ const PEDALS = {
   phaser: {
     id: "phaser", kind: "value",
     red: 4, color: "#88ddff", icon: "❄",
-    rarity: 2,
     apply(atk, red) {
       if (red <= 0) return;
       if (atk.phaserRequired == null || red < atk.phaserRequired) {
@@ -94,12 +90,10 @@ const PEDALS = {
   delay: {
     id: "delay", kind: "copy",
     red: 1, color: "#cc88ff", icon: "◌",
-    rarity: 3,
   },
   gigadelay: {
     id: "gigadelay", kind: "copy",
     red: 2, color: "#aa44ff", icon: "◎",
-    rarity: 5,
   },
 
   // ===== Modifier: 乗算 =====
@@ -107,19 +101,16 @@ const PEDALS = {
     id: "booster", kind: "modifier",
     red: 2, color: "#ffaa44", icon: "×",
     op: "mult",
-    rarity: 2,
   },
   overdrive: {
     id: "overdrive", kind: "modifier",
     red: 3, color: "#ff8833", icon: "⊗",
     op: "mult",
-    rarity: 4,
   },
   stack: {
     id: "stack", kind: "modifier",
     red: 4, color: "#ff5522", icon: "✱",
     op: "mult",
-    rarity: 5,
   },
 
   // ===== Modifier: 加算 =====
@@ -160,9 +151,6 @@ const PEDALS = {
     id: "powersupply", kind: "passive",
     red: 3, color: "#66ddaa", icon: "⚡",
     hook: "onStep", ratio: 0.03,
-    // 強力すぎるため序盤フロアからは出さない (6F 以降のみドロップ対象)。
-    // currentFloorIdx >= minFloor のフロアでだけプールに含める。
-    minFloor: 5,
   },
 
   // ===== Passive: Triplet Echo =====
@@ -175,7 +163,6 @@ const PEDALS = {
     red: 3, color: "#ff88dd", icon: "✦",
     hook: "onAttack",
     boostable: true, // modifier (×/+/−) で赤字が変動 → 発動間隔が変わる
-    rarity: 3,
   },
 
   // ===== Passive: 最大HP ブースト =====
@@ -193,13 +180,11 @@ const PEDALS = {
     id: "cabsim", kind: "passive",
     red: 30, color: "#66bb88", icon: "▥",
     hook: "maxHpBoost", noRed: true,
-    rarity: 2,
   },
   subwoofer: {
     id: "subwoofer", kind: "passive",
     red: 50, color: "#44aa66", icon: "▩",
     hook: "maxHpBoost", noRed: true,
-    rarity: 3,
   },
 
   // ===== Passive: LineSelector (武器スロット追加) =====
@@ -208,13 +193,11 @@ const PEDALS = {
   // ★ ペダルを外すと、その追加スロットに装備していた武器と、そのスロット内のペダル
   //   全てが「消失」する (インベントリには戻らない)。removePedalFromSlot 側で
   //   確認ダイアログを出してから喪失処理を実行する。
-  // 出現絞り: rarity 5 (PowerStack 等と同じレア枠)
   lineselector: {
     id: "lineselector", kind: "passive",
     red: 0, color: "#bb88ff", icon: "⫶",
     hook: "lineselector",
     noRed: true,
-    rarity: 5,
   },
 
   // ===== Passive: Shimmer (確率パリィ) =====
@@ -226,7 +209,6 @@ const PEDALS = {
     red: 1, color: "#c8aaff", icon: "✦",
     hook: "shimmerParry",
     boostable: true,
-    rarity: 3,
   },
 
   // ===== Baby-locked: 騎士の最期の加護 =====
